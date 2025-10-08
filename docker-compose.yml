@@ -11,8 +11,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      graph-db:
-        condition: service_healthy
     restart: unless-stopped
     networks:
       - ai-contracts-network
@@ -46,9 +44,9 @@ services:
   graph-db:
     image: neo4j:5.15.0
     container_name: ai-contracts-graph-db
-    expose:
-      - "7474"
-      - "7687"
+    ports:
+      - "7474:7474"
+      - "7687:7687"
     environment:
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=${NEO4J_PLUGINS:-'["apoc"]'}
