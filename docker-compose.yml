@@ -11,6 +11,19 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      frontend:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - ai-contracts-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai-contracts-frontend
+    expose:
+      - "80"
     restart: unless-stopped
     networks:
       - ai-contracts-network
