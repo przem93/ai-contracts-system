@@ -19,4 +19,9 @@ export class AppController {
   getTest() {
     return this.appService.getTestEndpoint();
   }
+
+  @Get('api/neo4j/verify')
+  async verifyNeo4jConnection() {
+    return this.appService.verifyNeo4jConnection();
+  }
 }
