@@ -48,6 +48,43 @@ The Neo4j graph database runs on ports:
 
 ## Development
 
+### Development Mode with Hot Reload
+
+For active development with automatic backend refresh on code changes:
+
+```bash
+# Make the script executable (first time only)
+chmod +x docker-compose.dev.sh
+
+# Start in development mode
+./docker-compose.dev.sh
+```
+
+**OR** manually:
+
+```bash
+# Start with development configuration
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+```
+
+**Features in Development Mode:**
+- ✅ Automatic backend refresh when source code changes
+- ✅ Source code mounted as volumes for instant updates
+- ✅ Only works when `NODE_ENV=development`
+- ✅ No need to rebuild after code changes
+
+**Note:** The hot reload feature uses NestJS's built-in watch mode (`--watch` flag) and only activates when `NODE_ENV` is set to `development`.
+
+### Production Mode
+
+For production deployment:
+
+```bash
+docker-compose up -d
+```
+
+This uses the standard production Dockerfile with optimized builds.
+
 ### View Logs
 
 ```bash
@@ -58,26 +95,26 @@ docker-compose logs -f
 docker-compose logs -f backend
 
 # Neo4j only
-docker-compose logs -f neo4j
-```
-
-### Rebuild Backend
-
-If you make changes to the backend code:
-
-```bash
-docker-compose up -d --build backend
+docker-compose logs -f graph-db
 ```
 
 ### Stop Services
 
 ```bash
+# Development mode
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
+
+# Production mode
 docker-compose down
 ```
 
 ### Stop Services and Remove Volumes
 
 ```bash
+# Development mode
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+
+# Production mode
 docker-compose down -v
 ```
 
