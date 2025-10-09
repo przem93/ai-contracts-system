@@ -1,3 +1,10 @@
+---
+description: Project overview
+globs:
+alwaysApply: true
+---
+
+
 # 🧩 AI Contracts System
 
 ## 🧠 Overview
@@ -21,3 +28,4 @@ The system transforms these YAML contracts into a **graph representation** store
   ```bash
   CONTRACTS_PATH=/contracts/**/*.yml
 ```
+
