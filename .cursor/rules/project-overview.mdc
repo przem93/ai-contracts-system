@@ -1,0 +1,31 @@
+---
+description: Project overview
+globs:
+alwaysApply: true
+---
+
+
+# 🧩 AI Contracts System
+
+## 🧠 Overview
+**AI Contracts System** is a backend–frontend platform that manages and visualizes **technical dependency contracts** across an application ecosystem.  
+It ingests **YAML contract files** — delivered from external repositories or services — and uses them to represent the **real-world structure and relationships** between modules, APIs, and even React components.
+
+The system transforms these YAML contracts into a **graph representation** stored in a Neo4j database, making it possible to explore, validate, and reason about dependencies programmatically or through a UI.
+
+---
+
+## ⚙️ Key Features
+
+- **External YAML ingestion**  
+  The system accepts YAML files provided from outside sources (e.g. other repos or CI pipelines).
+
+- **Real-state reflection**  
+  Each YAML file describes the **actual current structure** of a project — its modules, components, and interdependencies.
+
+- **Configurable sources**  
+  YAML file locations are defined via an `.env` variable, e.g.:
+  ```bash
+  CONTRACTS_PATH=/contracts/**/*.yml
+```
+
