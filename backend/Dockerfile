@@ -15,7 +15,7 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Production stage
+# Final stage
 FROM node:20-alpine
 
 WORKDIR /app
@@ -23,14 +23,21 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install only production dependencies
-RUN npm ci --only=production
+# Install all dependencies (needed for development mode)
+RUN npm ci
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist ./dist
 
+# Copy source code (needed for development hot reload)
+COPY . .
+
+# Copy and set permissions for start script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Expose the application port
 EXPOSE 3000
 
-# Run the application
-CMD ["node", "dist/main"]
+# Run the application using start script
+CMD ["./start.sh"]
