@@ -18,18 +18,6 @@ export class AppService {
     };
   }
 
-  getTestEndpoint() {
-    return {
-      message: 'Test endpoint is working! This endpoint will be removed later.',
-      timestamp: new Date().toISOString(),
-      data: {
-        backend: 'NestJS',
-        database: 'Neo4j',
-        status: 'operational',
-      },
-    };
-  }
-
   async verifyNeo4jConnection() {
     const connectionStatus = await this.neo4jService.verifyConnection();
     let testQueryResult = null;

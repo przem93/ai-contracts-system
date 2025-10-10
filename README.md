@@ -38,7 +38,7 @@ The backend API runs on port 3000 (configurable via `BACKEND_PORT` in `.env`).
 
 - `GET /` - Welcome message
 - `GET /health` - Health check endpoint
-- `GET /api/test` - Test endpoint (will be removed later)
+  
 
 ### Neo4j Database
 

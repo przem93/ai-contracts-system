@@ -15,11 +15,6 @@ export class AppController {
     return this.appService.getHealth();
   }
 
-  @Get('test')
-  getTest() {
-    return this.appService.getTestEndpoint();
-  }
-
   @Get('neo4j/verify')
   async verifyNeo4jConnection() {
     return this.appService.verifyNeo4jConnection();
