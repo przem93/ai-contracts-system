@@ -1,0 +1,31 @@
+name: example-service
+version: 1.0.0
+type: service
+description: Example contract file for testing
+
+dependencies:
+  - name: auth-service
+    version: "^2.0.0"
+  - name: database
+    version: "^1.5.0"
+
+endpoints:
+  - path: /api/users
+    method: GET
+    description: Get all users
+  - path: /api/users/:id
+    method: GET
+    description: Get user by ID
+
+components:
+  - name: UserController
+    type: controller
+    responsibilities:
+      - Handle user HTTP requests
+      - Validate user input
+  - name: UserService
+    type: service
+    responsibilities:
+      - Business logic for users
+      - Data persistence
+
