@@ -1,0 +1,8 @@
+id: test-controller
+type: controller
+category: api
+description: Controller with invalid dependency missing module_id
+dependencies:
+  - parts:
+      - part_id: id
+        type: string

@@ -1,0 +1,6 @@
+id: test-service
+type: service
+category: backend
+description: Service with invalid part missing id
+parts:
+  - type: function

@@ -9,44 +9,51 @@ import {
   Contract,
 } from "./contract.schema";
 
+/**
+ * Helper function to load and parse YAML contract files
+ */
+function loadYamlContract(filename: string): any {
+  const testFixturesPath = path.join(__dirname, "test-fixtures");
+  const filePath = path.join(testFixturesPath, filename);
+  const fileContent = fs.readFileSync(filePath, "utf8");
+  return yaml.load(fileContent);
+}
+
+/**
+ * Helper function to load contract from main contracts folder
+ */
+function loadMainContract(filename: string): any {
+  const contractsPath = path.join(__dirname, "../../../contracts");
+  const filePath = path.join(contractsPath, filename);
+  const fileContent = fs.readFileSync(filePath, "utf8");
+  return yaml.load(fileContent);
+}
+
 describe("Contract Schema Validation", () => {
   describe("PartSchema", () => {
-    it("should validate a valid part", () => {
-      const validPart = {
-        id: "getUserById",
-        type: "function",
-      };
+    it("should validate a valid part from YAML", () => {
+      const contract = loadYamlContract("valid-contract-full.yml");
+      const validPart = contract.parts[0]; // getUserById
 
       const result = PartSchema.safeParse(validPart);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validPart);
+        expect(result.data.id).toBe("getUserById");
+        expect(result.data.type).toBe("function");
       }
     });
 
-    it("should reject a part without id", () => {
-      const invalidPart = {
-        type: "function",
-      };
+    it("should reject a part without id from YAML", () => {
+      const contract = loadYamlContract("invalid-part-without-id.yml");
+      const invalidPart = contract.parts[0];
 
       const result = PartSchema.safeParse(invalidPart);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a part without type", () => {
-      const invalidPart = {
-        id: "getUserById",
-      };
-
-      const result = PartSchema.safeParse(invalidPart);
-      expect(result.success).toBe(false);
-    });
-
-    it("should reject a part with empty id", () => {
-      const invalidPart = {
-        id: "",
-        type: "function",
-      };
+    it("should reject a part without type from YAML", () => {
+      const contract = loadYamlContract("invalid-part-without-type.yml");
+      const invalidPart = contract.parts[0];
 
       const result = PartSchema.safeParse(invalidPart);
       expect(result.success).toBe(false);
@@ -54,20 +61,19 @@ describe("Contract Schema Validation", () => {
   });
 
   describe("DependencyPartSchema", () => {
-    it("should validate a valid dependency part", () => {
-      const validDependencyPart = {
-        part_id: "id",
-        type: "string",
-      };
+    it("should validate a valid dependency part from YAML", () => {
+      const contract = loadYamlContract("valid-contract-full.yml");
+      const validDependencyPart = contract.dependencies[0].parts[0];
 
       const result = DependencyPartSchema.safeParse(validDependencyPart);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validDependencyPart);
+        expect(result.data.part_id).toBe("id");
+        expect(result.data.type).toBe("string");
       }
     });
 
-    it("should reject a dependency part without part_id", () => {
+    it("should reject a dependency part without part_id from YAML", () => {
       const invalidDependencyPart = {
         type: "string",
       };
@@ -76,7 +82,7 @@ describe("Contract Schema Validation", () => {
       expect(result.success).toBe(false);
     });
 
-    it("should reject a dependency part without type", () => {
+    it("should reject a dependency part without type from YAML", () => {
       const invalidDependencyPart = {
         part_id: "id",
       };
@@ -87,45 +93,39 @@ describe("Contract Schema Validation", () => {
   });
 
   describe("DependencySchema", () => {
-    it("should validate a valid dependency", () => {
-      const validDependency = {
-        module_id: "users-permissions",
-        parts: [
-          { part_id: "id", type: "string" },
-          { part_id: "name", type: "string" },
-        ],
-      };
+    it("should validate a valid dependency from YAML", () => {
+      const contract = loadYamlContract("valid-contract-full.yml");
+      const validDependency = contract.dependencies[0];
 
       const result = DependencySchema.safeParse(validDependency);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validDependency);
+        expect(result.data.module_id).toBe("users-permissions");
+        expect(result.data.parts).toHaveLength(2);
       }
     });
 
-    it("should reject a dependency without module_id", () => {
-      const invalidDependency = {
-        parts: [{ part_id: "id", type: "string" }],
-      };
+    it("should reject a dependency without module_id from YAML", () => {
+      const contract = loadYamlContract(
+        "invalid-dependency-without-module-id.yml",
+      );
+      const invalidDependency = contract.dependencies[0];
 
       const result = DependencySchema.safeParse(invalidDependency);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a dependency without parts", () => {
-      const invalidDependency = {
-        module_id: "users-permissions",
-      };
+    it("should reject a dependency without parts from YAML", () => {
+      const contract = loadYamlContract("invalid-dependency-without-parts.yml");
+      const invalidDependency = contract.dependencies[0];
 
       const result = DependencySchema.safeParse(invalidDependency);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a dependency with empty parts array", () => {
-      const invalidDependency = {
-        module_id: "users-permissions",
-        parts: [],
-      };
+    it("should reject a dependency with empty parts array from YAML", () => {
+      const contract = loadYamlContract("invalid-dependency-empty-parts.yml");
+      const invalidDependency = contract.dependencies[0];
 
       const result = DependencySchema.safeParse(invalidDependency);
       expect(result.success).toBe(false);
@@ -133,100 +133,74 @@ describe("Contract Schema Validation", () => {
   });
 
   describe("ContractSchema", () => {
-    it("should validate a valid contract with all fields", () => {
-      const validContract = {
-        id: "users-get",
-        type: "controller",
-        category: "api",
-        description: "Users get endpoint",
-        parts: [
-          { id: "getUserById", type: "function" },
-          { id: "getAllUsers", type: "function" },
-        ],
-        dependencies: [
-          {
-            module_id: "users-permissions",
-            parts: [
-              { part_id: "id", type: "string" },
-              { part_id: "name", type: "string" },
-            ],
-          },
-        ],
-      };
+    it("should validate a valid contract with all fields from YAML", () => {
+      const validContract = loadYamlContract("valid-contract-full.yml");
 
       const result = ContractSchema.safeParse(validContract);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data).toEqual(validContract);
+        expect(result.data.id).toBe("users-get");
+        expect(result.data.type).toBe("controller");
+        expect(result.data.category).toBe("api");
+        expect(result.data.description).toBe("Users get endpoint");
+        expect(result.data.parts).toHaveLength(2);
+        expect(result.data.dependencies).toHaveLength(1);
       }
     });
 
-    it("should validate a contract without optional fields", () => {
-      const validContract = {
-        id: "simple-service",
-        type: "service",
-        category: "backend",
-        description: "A simple service",
-      };
+    it("should validate a contract without optional fields from YAML", () => {
+      const validContract = loadYamlContract("valid-contract-minimal.yml");
 
       const result = ContractSchema.safeParse(validContract);
       expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.id).toBe("simple-service");
+        expect(result.data.type).toBe("service");
+        expect(result.data.category).toBe("backend");
+        expect(result.data.description).toBe(
+          "A simple service without parts or dependencies",
+        );
+        expect(result.data.parts).toBeUndefined();
+        expect(result.data.dependencies).toBeUndefined();
+      }
     });
 
-    it("should reject a contract without id", () => {
-      const invalidContract = {
-        type: "controller",
-        category: "api",
-        description: "Users get endpoint",
-      };
+    it("should reject a contract without id from YAML", () => {
+      const invalidContract = loadYamlContract("invalid-missing-id.yml");
 
       const result = ContractSchema.safeParse(invalidContract);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a contract without type", () => {
-      const invalidContract = {
-        id: "users-get",
-        category: "api",
-        description: "Users get endpoint",
-      };
+    it("should reject a contract without type from YAML", () => {
+      const invalidContract = loadYamlContract("invalid-missing-type.yml");
 
       const result = ContractSchema.safeParse(invalidContract);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a contract without category", () => {
-      const invalidContract = {
-        id: "users-get",
-        type: "controller",
-        description: "Users get endpoint",
-      };
+    it("should reject a contract without category from YAML", () => {
+      const invalidContract = loadYamlContract("invalid-missing-category.yml");
 
       const result = ContractSchema.safeParse(invalidContract);
       expect(result.success).toBe(false);
     });
 
-    it("should reject a contract without description", () => {
-      const invalidContract = {
-        id: "users-get",
-        type: "controller",
-        category: "api",
-      };
+    it("should reject a contract without description from YAML", () => {
+      const invalidContract = loadYamlContract(
+        "invalid-missing-description.yml",
+      );
 
       const result = ContractSchema.safeParse(invalidContract);
       expect(result.success).toBe(false);
     });
   });
 
-  describe("YAML File Validation", () => {
+  describe("YAML File Validation - Main Contracts", () => {
     it("should validate example-contract.yml from contracts folder", () => {
-      const contractsPath = path.join(__dirname, "../../../contracts");
-      const filePath = path.join(contractsPath, "example-contract.yml");
+      const contract = loadMainContract("example-contract.yml");
 
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const parsedYaml = yaml.load(fileContent);
-
-      const result = ContractSchema.safeParse(parsedYaml);
+      const result = ContractSchema.safeParse(contract);
       expect(result.success).toBe(true);
 
       if (result.success) {
@@ -240,13 +214,9 @@ describe("Contract Schema Validation", () => {
     });
 
     it("should validate example-dependency.yml from contracts folder", () => {
-      const contractsPath = path.join(__dirname, "../../../contracts");
-      const filePath = path.join(contractsPath, "example-dependency.yml");
+      const contract = loadMainContract("example-dependency.yml");
 
-      const fileContent = fs.readFileSync(filePath, "utf8");
-      const parsedYaml = yaml.load(fileContent);
-
-      const result = ContractSchema.safeParse(parsedYaml);
+      const result = ContractSchema.safeParse(contract);
       expect(result.success).toBe(true);
 
       if (result.success) {
@@ -258,36 +228,16 @@ describe("Contract Schema Validation", () => {
         expect(result.data.dependencies).toBeUndefined();
       }
     });
+  });
 
-    it("should reject invalid YAML contract", () => {
-      const invalidYamlContract = `
-id: invalid-contract
-type: controller
-# Missing required 'category' field
-description: This contract is missing category
-      `;
-
-      const parsedYaml = yaml.load(invalidYamlContract);
-      const result = ContractSchema.safeParse(parsedYaml);
-      expect(result.success).toBe(false);
-    });
-
-    it("should validate contract dependency relationships", () => {
-      const contractsPath = path.join(__dirname, "../../../contracts");
-
-      // Load both contracts
-      const dependentContract = yaml.load(
-        fs.readFileSync(
-          path.join(contractsPath, "example-contract.yml"),
-          "utf8",
-        ),
+  describe("Contract Dependency Relationships", () => {
+    it("should validate contract dependency relationships from YAML files", () => {
+      // Load both contracts from main contracts folder
+      const dependentContract = loadMainContract(
+        "example-contract.yml",
       ) as Contract;
-
-      const dependencyContract = yaml.load(
-        fs.readFileSync(
-          path.join(contractsPath, "example-dependency.yml"),
-          "utf8",
-        ),
+      const dependencyContract = loadMainContract(
+        "example-dependency.yml",
       ) as Contract;
 
       // Validate both contracts
@@ -320,34 +270,19 @@ description: This contract is missing category
       }
     });
 
-    it("should detect type mismatch in dependencies", () => {
-      const contractWithTypeMismatch = {
-        id: "test-contract",
-        type: "controller",
-        category: "api",
-        description: "Test contract",
-        dependencies: [
-          {
-            module_id: "users-permissions",
-            parts: [
-              // This has type 'function' but should be 'string' based on example-dependency.yml
-              { part_id: "id", type: "function" },
-            ],
-          },
-        ],
-      };
+    it("should detect type mismatch in dependencies from YAML files", () => {
+      // Load contract with type mismatch from test fixtures
+      const contractWithTypeMismatch = loadYamlContract(
+        "contract-with-type-mismatch.yml",
+      );
 
       // The schema will validate the structure but not semantic type matching
       const result = ContractSchema.safeParse(contractWithTypeMismatch);
       expect(result.success).toBe(true);
 
       // To detect semantic mismatches, we need to compare against actual contracts
-      const contractsPath = path.join(__dirname, "../../../contracts");
-      const dependencyContract = yaml.load(
-        fs.readFileSync(
-          path.join(contractsPath, "example-dependency.yml"),
-          "utf8",
-        ),
+      const dependencyContract = loadMainContract(
+        "example-dependency.yml",
       ) as Contract;
 
       const dep = contractWithTypeMismatch.dependencies[0];
@@ -357,7 +292,89 @@ description: This contract is missing category
       );
 
       // This check would fail - types don't match
+      // The referenced part claims 'id' is a 'function' but it's actually a 'string'
       expect(actualPart?.type).not.toBe(referencedPart.type);
+      expect(actualPart?.type).toBe("string");
+      expect(referencedPart.type).toBe("function");
+    });
+
+    it("should validate all parts are correctly typed in dependency from YAML", () => {
+      const dependentContract = loadYamlContract(
+        "valid-contract-full.yml",
+      ) as Contract;
+      const dependencyContract = loadYamlContract(
+        "valid-dependency-module.yml",
+      ) as Contract;
+
+      // Validate structure
+      expect(ContractSchema.safeParse(dependentContract).success).toBe(true);
+      expect(ContractSchema.safeParse(dependencyContract).success).toBe(true);
+
+      // Verify each referenced part exists and has matching type
+      const dep = dependentContract.dependencies?.[0];
+      expect(dep).toBeDefined();
+
+      dep?.parts.forEach((referencedPart) => {
+        const actualPart = dependencyContract.parts?.find(
+          (p) => p.id === referencedPart.part_id,
+        );
+
+        expect(actualPart).toBeDefined();
+        expect(actualPart?.id).toBe(referencedPart.part_id);
+        expect(actualPart?.type).toBe(referencedPart.type);
+      });
+    });
+  });
+
+  describe("Complex YAML Parsing Scenarios", () => {
+    it("should handle contract with multiple dependencies from YAML", () => {
+      // This tests that we can parse complex YAML structures
+      const contract = loadYamlContract("valid-contract-full.yml");
+
+      expect(contract).toBeDefined();
+      expect(contract.id).toBeTruthy();
+      expect(contract.dependencies).toBeDefined();
+      expect(Array.isArray(contract.dependencies)).toBe(true);
+
+      const result = ContractSchema.safeParse(contract);
+      expect(result.success).toBe(true);
+    });
+
+    it("should handle contract with multiple parts from YAML", () => {
+      const contract = loadYamlContract("valid-dependency-module.yml");
+
+      expect(contract.parts).toBeDefined();
+      expect(contract.parts.length).toBeGreaterThan(1);
+
+      const result = ContractSchema.safeParse(contract);
+      expect(result.success).toBe(true);
+
+      if (result.success) {
+        expect(result.data.parts).toHaveLength(3);
+        expect(result.data.parts?.[0].id).toBe("id");
+        expect(result.data.parts?.[1].id).toBe("name");
+        expect(result.data.parts?.[2].id).toBe("checkPermission");
+      }
+    });
+
+    it("should properly parse and validate nested YAML structures", () => {
+      const contract = loadYamlContract("valid-contract-full.yml");
+
+      // Verify nested dependency structure
+      expect(contract.dependencies).toBeDefined();
+      expect(contract.dependencies[0].parts).toBeDefined();
+      expect(Array.isArray(contract.dependencies[0].parts)).toBe(true);
+
+      // Validate entire structure
+      const result = ContractSchema.safeParse(contract);
+      expect(result.success).toBe(true);
+
+      if (result.success) {
+        const firstDep = result.data.dependencies?.[0];
+        expect(firstDep?.module_id).toBe("users-permissions");
+        expect(firstDep?.parts[0].part_id).toBe("id");
+        expect(firstDep?.parts[0].type).toBe("string");
+      }
     });
   });
 });

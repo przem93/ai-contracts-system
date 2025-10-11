@@ -1,0 +1,16 @@
+id: users-get
+type: controller
+category: api
+description: Users get endpoint
+parts:
+  - id: getUserById
+    type: function
+  - id: getAllUsers
+    type: function
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: name
+        type: string

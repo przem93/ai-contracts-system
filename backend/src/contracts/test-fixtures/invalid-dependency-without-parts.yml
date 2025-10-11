@@ -1,0 +1,6 @@
+id: test-controller
+type: controller
+category: api
+description: Controller with invalid dependency missing parts
+dependencies:
+  - module_id: users-permissions
