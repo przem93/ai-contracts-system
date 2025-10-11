@@ -48,7 +48,7 @@ services:
       - ./backend/tsconfig.json:/app/tsconfig.json:ro
       - ./backend/nest-cli.json:/app/nest-cli.json:ro
       # Mount contracts directory for YAML parser
-      - ./contracts:/contracts:ro
+      - ${CONTRACTS_SOURCE_PATH:-./contracts}:/contracts:ro
     depends_on:
       graph-db:
         condition: service_healthy
