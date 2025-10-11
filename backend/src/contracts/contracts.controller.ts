@@ -1,7 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
-import { ContractsService } from './contracts.service';
+import { Controller, Get } from "@nestjs/common";
+import { ContractsService } from "./contracts.service";
 
-@Controller('contracts')
+@Controller("contracts")
 export class ContractsController {
   constructor(private readonly contractsService: ContractsService) {}
 
@@ -10,4 +10,3 @@ export class ContractsController {
     return this.contractsService.getAllContracts();
   }
 }
-

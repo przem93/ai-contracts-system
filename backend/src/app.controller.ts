@@ -1,5 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
-import { AppService } from './app.service';
+import { Controller, Get } from "@nestjs/common";
+import { AppService } from "./app.service";
 
 @Controller()
 export class AppController {
@@ -10,17 +10,17 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('health')
+  @Get("health")
   getHealth() {
     return this.appService.getHealth();
   }
 
-  @Get('test')
+  @Get("test")
   getTest() {
     return this.appService.getTestEndpoint();
   }
 
-  @Get('neo4j/verify')
+  @Get("neo4j/verify")
   async verifyNeo4jConnection() {
     return this.appService.verifyNeo4jConnection();
   }
