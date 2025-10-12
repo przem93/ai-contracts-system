@@ -171,8 +171,8 @@ docker-compose logs -f backend-test-watch
 
 **Features:**
 - ✅ Automatic test rerun on file changes
-- ✅ Interactive Jest watch mode
-- ✅ Source code mounted as volume for instant updates
+- ✅ Jest watch mode with `--watchAll` flag (runs all tests on every change)
+- ✅ Source code and contracts mounted as volumes for instant updates
 - ✅ Only runs when `NODE_ENV=development`
 - ✅ Isolated from main application services
 

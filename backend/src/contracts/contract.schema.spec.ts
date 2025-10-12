@@ -21,9 +21,15 @@ function loadYamlContract(filename: string): any {
 
 /**
  * Helper function to load contract from main contracts folder
+ * In Docker: contracts mounted at /app/contracts
+ * Locally: contracts at ../../../contracts (from backend/src/contracts)
  */
 function loadMainContract(filename: string): any {
-  const contractsPath = path.join(__dirname, "../../../contracts");
+  // Try Docker path first, then fall back to local path
+  const dockerPath = path.join(__dirname, "../../contracts");
+  const localPath = path.join(__dirname, "../../../contracts");
+
+  const contractsPath = fs.existsSync(dockerPath) ? dockerPath : localPath;
   const filePath = path.join(contractsPath, filename);
   const fileContent = fs.readFileSync(filePath, "utf8");
   return yaml.load(fileContent);

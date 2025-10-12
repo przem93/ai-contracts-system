@@ -27,9 +27,9 @@ docker-compose --profile development up
 
 The service:
 1. Uses a lightweight `Dockerfile.test` optimized for testing
-2. Mounts your local `src` directory as a volume
-3. Runs `npm run test:watch` 
-4. Automatically detects file changes and reruns affected tests
+2. Mounts your local `src` directory and `contracts` directory as volumes
+3. Runs `npm run test:watch -- --watchAll` (runs all tests on every change)
+4. Automatically detects file changes and reruns all tests
 
 ### Stopping the Service
 
