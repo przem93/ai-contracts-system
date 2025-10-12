@@ -1,0 +1,7 @@
+id: test-controller
+type: controller
+category: api
+description: Controller with invalid dependency with empty parts array
+dependencies:
+  - module_id: users-permissions
+    parts: []

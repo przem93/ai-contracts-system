@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
-import { glob } from 'glob';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as fs from "fs";
+import * as path from "path";
+import * as yaml from "js-yaml";
+import { glob } from "glob";
 
 @Injectable()
 export class ContractsService {
@@ -12,11 +12,11 @@ export class ContractsService {
   constructor(private configService: ConfigService) {}
 
   async getAllContracts(): Promise<any[]> {
-    const contractsPath = this.configService.get<string>('CONTRACTS_PATH');
-    
+    const contractsPath = this.configService.get<string>("CONTRACTS_PATH");
+
     if (!contractsPath) {
-      this.logger.error('CONTRACTS_PATH environment variable is not set');
-      throw new Error('CONTRACTS_PATH environment variable is not set');
+      this.logger.error("CONTRACTS_PATH environment variable is not set");
+      throw new Error("CONTRACTS_PATH environment variable is not set");
     }
 
     this.logger.log(`Loading contracts from: ${contractsPath}`);
@@ -28,7 +28,9 @@ export class ContractsService {
       });
 
       if (files.length === 0) {
-        this.logger.warn(`No contract files found matching pattern: ${contractsPath}`);
+        this.logger.warn(
+          `No contract files found matching pattern: ${contractsPath}`,
+        );
         return [];
       }
 
@@ -38,15 +40,15 @@ export class ContractsService {
       const contracts = [];
       for (const file of files) {
         try {
-          const fileContent = fs.readFileSync(file, 'utf8');
+          const fileContent = fs.readFileSync(file, "utf8");
           const parsedContract = yaml.load(fileContent);
-          
+
           contracts.push({
             fileName: path.basename(file),
             filePath: file,
             content: parsedContract,
           });
-          
+
           this.logger.log(`Successfully parsed: ${path.basename(file)}`);
         } catch (error) {
           this.logger.error(`Error parsing file ${file}:`, error.message);
@@ -56,9 +58,8 @@ export class ContractsService {
 
       return contracts;
     } catch (error) {
-      this.logger.error('Error loading contracts:', error.message);
+      this.logger.error("Error loading contracts:", error.message);
       throw new Error(`Failed to load contracts: ${error.message}`);
     }
   }
 }
-

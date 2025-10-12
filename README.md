@@ -157,6 +157,32 @@ NODE_ENV=development docker-compose up --build
 
 **Note:** The hot reload feature uses NestJS's built-in watch mode (`--watch` flag) and only activates when `NODE_ENV` is set to `development`. The `start.sh` script automatically detects the environment and runs the appropriate command.
 
+### Running Tests in Watch Mode with Docker
+
+A dedicated Docker service is available for running backend tests in watch mode during development:
+
+```bash
+# Start the test watch service
+docker-compose --profile development up backend-test-watch
+
+# View test output
+docker-compose logs -f backend-test-watch
+```
+
+**Features:**
+- ✅ Automatic test rerun on file changes
+- ✅ Jest watch mode with `--watchAll` flag (runs all tests on every change)
+- ✅ Source code and contracts mounted as volumes for instant updates
+- ✅ Only runs when `NODE_ENV=development`
+- ✅ Isolated from main application services
+
+**Stop the test watch service:**
+```bash
+docker-compose stop backend-test-watch
+```
+
+For more details on development workflows, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
 ### Production Mode
 
 For production deployment:

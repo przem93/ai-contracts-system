@@ -1,31 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import { Neo4jService } from './neo4j/neo4j.service';
+import { Injectable } from "@nestjs/common";
+import { Neo4jService } from "./neo4j/neo4j.service";
 
 @Injectable()
 export class AppService {
   constructor(private readonly neo4jService: Neo4jService) {}
 
   getHello(): string {
-    return 'AI Contracts System - Backend API is running!';
+    return "AI Contracts System - Backend API is running!";
   }
 
   getHealth() {
     return {
-      status: 'ok',
+      status: "ok",
       timestamp: new Date().toISOString(),
-      service: 'ai-contracts-backend',
-      version: '1.0.0',
+      service: "ai-contracts-backend",
+      version: "1.0.0",
     };
   }
 
   getTestEndpoint() {
     return {
-      message: 'Test endpoint is working! This endpoint will be removed later.',
+      message: "Test endpoint is working! This endpoint will be removed later.",
       timestamp: new Date().toISOString(),
       data: {
-        backend: 'NestJS',
-        database: 'Neo4j',
-        status: 'operational',
+        backend: "NestJS",
+        database: "Neo4j",
+        status: "operational",
       },
     };
   }
@@ -44,7 +44,7 @@ export class AppService {
 
     return {
       timestamp: new Date().toISOString(),
-      service: 'ai-contracts-backend',
+      service: "ai-contracts-backend",
       neo4j: {
         ...connectionStatus,
         testQuery: testQueryResult,

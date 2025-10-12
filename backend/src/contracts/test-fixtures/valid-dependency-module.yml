@@ -1,0 +1,11 @@
+id: users-permissions
+type: service
+description: Users permissions service
+category: service
+parts:
+  - id: id
+    type: string
+  - id: name
+    type: string
+  - id: checkPermission
+    type: function

@@ -1,7 +1,7 @@
 id: users-get
 type: controller
-description: Users get endpoint
 category: api
+description: Users get endpoint
 parts:
   - id: getUserById
     type: function

@@ -1,23 +1,23 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import neo4j, { Driver, Session } from 'neo4j-driver';
+import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import neo4j, { Driver, Session } from "neo4j-driver";
 
 @Injectable()
 export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   private driver: Driver;
 
   async onModuleInit() {
-    const uri = process.env.NEO4J_URI || 'bolt://localhost:7687';
-    const user = process.env.NEO4J_USER || 'neo4j';
-    const password = process.env.NEO4J_PASSWORD || 'password';
+    const uri = process.env.NEO4J_URI || "bolt://localhost:7687";
+    const user = process.env.NEO4J_USER || "neo4j";
+    const password = process.env.NEO4J_PASSWORD || "password";
 
     this.driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
 
     // Verify connectivity
     try {
       await this.driver.verifyConnectivity();
-      console.log('✅ Successfully connected to Neo4j database');
+      console.log("✅ Successfully connected to Neo4j database");
     } catch (error) {
-      console.error('❌ Failed to connect to Neo4j database:', error);
+      console.error("❌ Failed to connect to Neo4j database:", error);
       throw error;
     }
   }
@@ -25,7 +25,7 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     if (this.driver) {
       await this.driver.close();
-      console.log('🔌 Neo4j connection closed');
+      console.log("🔌 Neo4j connection closed");
     }
   }
 
@@ -46,7 +46,7 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
       const serverInfo = await this.driver.getServerInfo();
       return {
         connected: true,
-        message: 'Successfully connected to Neo4j',
+        message: "Successfully connected to Neo4j",
         serverInfo: {
           address: serverInfo.address,
           version: serverInfo.agent,
@@ -64,11 +64,13 @@ export class Neo4jService implements OnModuleInit, OnModuleDestroy {
     const session = this.getSession();
     try {
       // Simple query to verify database connection
-      const result = await session.run('RETURN "Hello from Neo4j!" AS message, timestamp() AS timestamp');
+      const result = await session.run(
+        'RETURN "Hello from Neo4j!" AS message, timestamp() AS timestamp',
+      );
       const record = result.records[0];
       return {
-        message: record.get('message'),
-        timestamp: record.get('timestamp').toNumber(),
+        message: record.get("message"),
+        timestamp: record.get("timestamp").toNumber(),
       };
     } finally {
       await session.close();

@@ -28,7 +28,8 @@
     "js-yaml": "^4.1.0",
     "neo4j-driver": "^5.15.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.0",

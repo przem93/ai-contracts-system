@@ -1,0 +1,29 @@
+# Dockerfile for running tests in watch mode
+# This is optimized for development and testing purposes only
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for better terminal support
+RUN apk add --no-cache tini
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for testing)
+RUN npm ci
+
+# Copy necessary configuration files
+COPY tsconfig.json ./
+COPY nest-cli.json ./
+COPY .eslintrc.js ./
+
+# Copy source code (will be overridden by volume mount in development)
+COPY src ./src
+
+# Use tini to handle signals properly
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Default command (can be overridden in docker-compose.yml)
+CMD ["npm", "run", "test:watch"]

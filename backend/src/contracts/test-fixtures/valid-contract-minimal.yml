@@ -1,0 +1,4 @@
+id: simple-service
+type: service
+category: backend
+description: A simple service without parts or dependencies
