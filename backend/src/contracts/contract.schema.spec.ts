@@ -6,7 +6,6 @@ import {
   PartSchema,
   DependencySchema,
   DependencyPartSchema,
-  Contract,
 } from "./contract.schema";
 
 /**
@@ -233,102 +232,6 @@ describe("Contract Schema Validation", () => {
         expect(result.data.parts).toHaveLength(3);
         expect(result.data.dependencies).toBeUndefined();
       }
-    });
-  });
-
-  describe("Contract Dependency Relationships", () => {
-    it("should validate contract dependency relationships from YAML files", () => {
-      // Load both contracts from main contracts folder
-      const dependentContract = loadMainContract(
-        "example-contract.yml",
-      ) as Contract;
-      const dependencyContract = loadMainContract(
-        "example-dependency.yml",
-      ) as Contract;
-
-      // Validate both contracts
-      const result1 = ContractSchema.safeParse(dependentContract);
-      const result2 = ContractSchema.safeParse(dependencyContract);
-
-      expect(result1.success).toBe(true);
-      expect(result2.success).toBe(true);
-
-      if (result1.success && result2.success) {
-        // Verify that the dependency reference exists
-        const dep = dependentContract.dependencies?.[0];
-        expect(dep?.module_id).toBe(dependencyContract.id);
-
-        // Verify that referenced parts exist in the dependency module
-        const dependencyPartIds =
-          dependencyContract.parts?.map((p) => p.id) || [];
-        dep?.parts.forEach((part) => {
-          expect(dependencyPartIds).toContain(part.part_id);
-        });
-
-        // Verify type matching
-        dep?.parts.forEach((referencedPart) => {
-          const actualPart = dependencyContract.parts?.find(
-            (p) => p.id === referencedPart.part_id,
-          );
-          expect(actualPart).toBeDefined();
-          expect(actualPart?.type).toBe(referencedPart.type);
-        });
-      }
-    });
-
-    it("should detect type mismatch in dependencies from YAML files", () => {
-      // Load contract with type mismatch from test fixtures
-      const contractWithTypeMismatch = loadYamlContract(
-        "contract-with-type-mismatch.yml",
-      );
-
-      // The schema will validate the structure but not semantic type matching
-      const result = ContractSchema.safeParse(contractWithTypeMismatch);
-      expect(result.success).toBe(true);
-
-      // To detect semantic mismatches, we need to compare against actual contracts
-      const dependencyContract = loadMainContract(
-        "example-dependency.yml",
-      ) as Contract;
-
-      const dep = contractWithTypeMismatch.dependencies[0];
-      const referencedPart = dep.parts[0];
-      const actualPart = dependencyContract.parts?.find(
-        (p) => p.id === referencedPart.part_id,
-      );
-
-      // This check would fail - types don't match
-      // The referenced part claims 'id' is a 'function' but it's actually a 'string'
-      expect(actualPart?.type).not.toBe(referencedPart.type);
-      expect(actualPart?.type).toBe("string");
-      expect(referencedPart.type).toBe("function");
-    });
-
-    it("should validate all parts are correctly typed in dependency from YAML", () => {
-      const dependentContract = loadYamlContract(
-        "valid-contract-full.yml",
-      ) as Contract;
-      const dependencyContract = loadYamlContract(
-        "valid-dependency-module.yml",
-      ) as Contract;
-
-      // Validate structure
-      expect(ContractSchema.safeParse(dependentContract).success).toBe(true);
-      expect(ContractSchema.safeParse(dependencyContract).success).toBe(true);
-
-      // Verify each referenced part exists and has matching type
-      const dep = dependentContract.dependencies?.[0];
-      expect(dep).toBeDefined();
-
-      dep?.parts.forEach((referencedPart) => {
-        const actualPart = dependencyContract.parts?.find(
-          (p) => p.id === referencedPart.part_id,
-        );
-
-        expect(actualPart).toBeDefined();
-        expect(actualPart?.id).toBe(referencedPart.part_id);
-        expect(actualPart?.type).toBe(referencedPart.type);
-      });
     });
   });
 

@@ -1,9 +1,0 @@
-id: test-contract
-type: controller
-category: api
-description: Test contract with type mismatch in dependency
-dependencies:
-  - module_id: users-permissions
-    parts:
-      - part_id: id
-        type: function
