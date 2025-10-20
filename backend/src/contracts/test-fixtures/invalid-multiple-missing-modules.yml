@@ -1,0 +1,13 @@
+id: multi-dependency-service
+type: service
+category: api
+description: Service with multiple non-existent module dependencies
+dependencies:
+  - module_id: missing-module-one
+    parts:
+      - part_id: funcA
+        type: function
+  - module_id: missing-module-two
+    parts:
+      - part_id: funcB
+        type: function

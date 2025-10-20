@@ -253,6 +253,62 @@ describe("ContractsService", () => {
       expect(result.files[0].errors![0].path).toBeDefined();
       expect(result.files[0].errors![0].message).toBeDefined();
     });
+
+    it("should detect missing module dependencies", async () => {
+      const invalidPattern = path.join(
+        testFixturesPath,
+        "invalid-missing-module-dependency.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(invalidPattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      expect(result.files[0].valid).toBe(false);
+      expect(result.files[0].errors).toBeDefined();
+      expect(result.files[0].errors!.length).toBeGreaterThan(0);
+
+      const missingModuleError = result.files[0].errors!.find((err) =>
+        err.message.includes("does not exist"),
+      );
+      expect(missingModuleError).toBeDefined();
+      expect(missingModuleError!.message).toContain("non-existent-module");
+    });
+
+    it("should detect multiple missing module dependencies", async () => {
+      const invalidPattern = path.join(
+        testFixturesPath,
+        "invalid-multiple-missing-modules.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(invalidPattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      expect(result.files[0].valid).toBe(false);
+      expect(result.files[0].errors).toBeDefined();
+      expect(result.files[0].errors!.length).toBe(2);
+
+      expect(result.files[0].errors![0].message).toContain(
+        "missing-module-one",
+      );
+      expect(result.files[0].errors![1].message).toContain(
+        "missing-module-two",
+      );
+    });
+
+    it("should pass validation when all referenced modules exist", async () => {
+      // This test uses both valid-contract-full.yml (which depends on users-permissions)
+      // and valid-dependency-module.yml (which is the users-permissions module)
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.validateContracts();
+
+      expect(result).toBeDefined();
+      expect(result.valid).toBe(true);
+      expect(result.files.every((file) => file.valid)).toBe(true);
+    });
   });
 
   describe("getAllContracts", () => {
