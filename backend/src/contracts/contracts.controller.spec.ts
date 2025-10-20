@@ -151,6 +151,107 @@ describe("ContractsController", () => {
         "Service error",
       );
     });
+
+    it("should return validation errors for dependency part type mismatches", async () => {
+      const mockTypeMismatchResult = {
+        valid: false,
+        files: [
+          {
+            filePath: "/path/to/valid-module.yml",
+            fileName: "valid-module.yml",
+            valid: true,
+          },
+          {
+            filePath: "/path/to/invalid-type-mismatch.yml",
+            fileName: "invalid-type-mismatch.yml",
+            valid: false,
+            errors: [
+              {
+                path: "dependencies.0.parts.0.type",
+                message:
+                  'Part type mismatch: expected "string" but got "function"',
+              },
+            ],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "validateContracts")
+        .mockResolvedValue(mockTypeMismatchResult);
+
+      const result = await controller.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find((f) => !f.valid);
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const typeMismatchError = invalidFile!.errors!.find((err) =>
+        err.message.includes("Part type mismatch"),
+      );
+      expect(typeMismatchError).toBeDefined();
+      expect(typeMismatchError!.path).toContain("dependencies");
+      expect(typeMismatchError!.path).toContain("type");
+      expect(typeMismatchError!.message).toContain("expected");
+    });
+
+    it("should return validation errors for multiple dependency part type mismatches", async () => {
+      const mockMultipleTypeMismatchResult = {
+        valid: false,
+        files: [
+          {
+            filePath: "/path/to/valid-module.yml",
+            fileName: "valid-module.yml",
+            valid: true,
+          },
+          {
+            filePath: "/path/to/invalid-multiple-mismatches.yml",
+            fileName: "invalid-multiple-mismatches.yml",
+            valid: false,
+            errors: [
+              {
+                path: "dependencies.0.parts.0.type",
+                message:
+                  'Part type mismatch: expected "string" but got "function"',
+              },
+              {
+                path: "dependencies.0.parts.1.type",
+                message:
+                  'Part type mismatch: expected "string" but got "number"',
+              },
+              {
+                path: "dependencies.0.parts.2.type",
+                message:
+                  'Part type mismatch: expected "function" but got "string"',
+              },
+            ],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "validateContracts")
+        .mockResolvedValue(mockMultipleTypeMismatchResult);
+
+      const result = await controller.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find((f) => !f.valid);
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.errors).toBeDefined();
+
+      const typeMismatchErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Part type mismatch"),
+      );
+      expect(typeMismatchErrors.length).toBe(3);
+      typeMismatchErrors.forEach((err) => {
+        expect(err.path).toContain("dependencies");
+        expect(err.path).toContain("type");
+        expect(err.message).toContain("expected");
+      });
+    });
   });
 
   describe("getAllContracts", () => {

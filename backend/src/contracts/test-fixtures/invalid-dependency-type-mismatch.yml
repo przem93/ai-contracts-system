@@ -1,0 +1,11 @@
+id: test-module-with-type-mismatch
+type: controller
+category: api
+description: Test module with dependency part type mismatch
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: function
+      - part_id: name
+        type: string

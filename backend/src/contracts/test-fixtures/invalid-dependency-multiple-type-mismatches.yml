@@ -1,0 +1,13 @@
+id: test-module-with-multiple-mismatches
+type: controller
+category: api
+description: Test module with multiple dependency part type mismatches
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: function
+      - part_id: name
+        type: number
+      - part_id: checkPermission
+        type: string
