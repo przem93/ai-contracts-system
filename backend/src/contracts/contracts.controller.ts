@@ -9,4 +9,9 @@ export class ContractsController {
   async getAllContracts() {
     return this.contractsService.getAllContracts();
   }
+
+  @Get("validate")
+  async validateContracts() {
+    return this.contractsService.validateContracts();
+  }
 }
