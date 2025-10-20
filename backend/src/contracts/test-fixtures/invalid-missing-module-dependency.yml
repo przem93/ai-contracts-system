@@ -1,0 +1,9 @@
+id: test-service
+type: service
+category: api
+description: Test service with non-existent module dependency
+dependencies:
+  - module_id: non-existent-module
+    parts:
+      - part_id: someFunction
+        type: function

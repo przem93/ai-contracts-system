@@ -106,36 +106,34 @@ export class ContractsService {
       const validationResults = [];
       let allValid = true;
 
+      // First pass: Parse all contracts and collect their IDs
+      const parsedContracts: Array<{
+        file: string;
+        fileName: string;
+        contract: any;
+      }> = [];
+      const availableModuleIds = new Set<string>();
+
       for (const file of files) {
         const fileName = path.basename(file);
         try {
           const fileContent = fs.readFileSync(file, "utf8");
           const parsedContract = yaml.load(fileContent);
 
-          // Validate the parsed contract against the schema
-          const validationResult = ContractSchema.safeParse(parsedContract);
+          parsedContracts.push({
+            file,
+            fileName,
+            contract: parsedContract,
+          });
 
-          if (validationResult.success) {
-            validationResults.push({
-              filePath: file,
-              fileName,
-              valid: true,
-            });
-            this.logger.log(`✓ Valid: ${fileName}`);
-          } else {
-            allValid = false;
-            const errors = validationResult.error.issues.map((err) => ({
-              path: err.path.join(".") || "root",
-              message: err.message,
-            }));
-
-            validationResults.push({
-              filePath: file,
-              fileName,
-              valid: false,
-              errors,
-            });
-            this.logger.warn(`✗ Invalid: ${fileName}`);
+          // Collect module IDs for cross-contract validation
+          if (
+            parsedContract &&
+            typeof parsedContract === "object" &&
+            "id" in parsedContract &&
+            typeof parsedContract.id === "string"
+          ) {
+            availableModuleIds.add(parsedContract.id);
           }
         } catch (error) {
           allValid = false;
@@ -154,6 +152,56 @@ export class ContractsService {
             ],
           });
           this.logger.error(`✗ Parse error in ${fileName}:`, errorMessage);
+        }
+      }
+
+      // Second pass: Validate each contract with cross-contract validation
+      for (const { file, fileName, contract } of parsedContracts) {
+        // Validate the parsed contract against the schema
+        const validationResult = ContractSchema.safeParse(contract);
+
+        const errors: Array<{ path: string; message: string }> = [];
+
+        // Add schema validation errors
+        if (!validationResult.success) {
+          errors.push(
+            ...validationResult.error.issues.map((err) => ({
+              path: err.path.join(".") || "root",
+              message: err.message,
+            })),
+          );
+        }
+
+        // Cross-contract validation: Check if referenced module IDs exist
+        if (validationResult.success && contract.dependencies) {
+          for (let i = 0; i < contract.dependencies.length; i++) {
+            const dep = contract.dependencies[i];
+            if (!availableModuleIds.has(dep.module_id)) {
+              errors.push({
+                path: `dependencies.${i}.module_id`,
+                message: `Referenced module "${dep.module_id}" does not exist`,
+              });
+            }
+          }
+        }
+
+        // Determine if this file is valid
+        if (errors.length === 0) {
+          validationResults.push({
+            filePath: file,
+            fileName,
+            valid: true,
+          });
+          this.logger.log(`✓ Valid: ${fileName}`);
+        } else {
+          allValid = false;
+          validationResults.push({
+            filePath: file,
+            fileName,
+            valid: false,
+            errors,
+          });
+          this.logger.warn(`✗ Invalid: ${fileName}`);
         }
       }
 
