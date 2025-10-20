@@ -309,6 +309,74 @@ describe("ContractsService", () => {
       expect(result.valid).toBe(true);
       expect(result.files.every((file) => file.valid)).toBe(true);
     });
+
+    it("should detect dependency part type mismatch", async () => {
+      // Use glob pattern to include both files
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-dependency-type-mismatch,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-dependency-type-mismatch.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const typeMismatchError = invalidFile!.errors!.find((err) =>
+        err.message.includes("Part type mismatch"),
+      );
+      expect(typeMismatchError).toBeDefined();
+      expect(typeMismatchError!.message).toContain("expected");
+      expect(typeMismatchError!.message).toContain("string");
+      expect(typeMismatchError!.message).toContain("function");
+    });
+
+    it("should detect multiple dependency part type mismatches", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-dependency-multiple-type-mismatches,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-dependency-multiple-type-mismatches.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const typeMismatchErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Part type mismatch"),
+      );
+      expect(typeMismatchErrors.length).toBe(3);
+
+      // Check that all three mismatches are detected by checking the error paths
+      expect(
+        typeMismatchErrors.some((err) =>
+          err.path.includes("dependencies.0.parts.0.type"),
+        ),
+      ).toBe(true);
+      expect(
+        typeMismatchErrors.some((err) =>
+          err.path.includes("dependencies.0.parts.1.type"),
+        ),
+      ).toBe(true);
+      expect(
+        typeMismatchErrors.some((err) =>
+          err.path.includes("dependencies.0.parts.2.type"),
+        ),
+      ).toBe(true);
+    });
   });
 
   describe("getAllContracts", () => {

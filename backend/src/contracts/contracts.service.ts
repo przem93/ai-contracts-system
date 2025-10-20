@@ -106,13 +106,17 @@ export class ContractsService {
       const validationResults = [];
       let allValid = true;
 
-      // First pass: Parse all contracts and collect their IDs
+      // First pass: Parse all contracts and collect their IDs and parts
       const parsedContracts: Array<{
         file: string;
         fileName: string;
         contract: any;
       }> = [];
       const availableModuleIds = new Set<string>();
+      const moduleParts: Map<
+        string,
+        Array<{ id: string; type: string }>
+      > = new Map();
 
       for (const file of files) {
         const fileName = path.basename(file);
@@ -126,7 +130,7 @@ export class ContractsService {
             contract: parsedContract,
           });
 
-          // Collect module IDs for cross-contract validation
+          // Collect module IDs and parts for cross-contract validation
           if (
             parsedContract &&
             typeof parsedContract === "object" &&
@@ -134,6 +138,15 @@ export class ContractsService {
             typeof parsedContract.id === "string"
           ) {
             availableModuleIds.add(parsedContract.id);
+
+            // Store module parts for type validation
+            if (
+              "parts" in parsedContract &&
+              parsedContract.parts &&
+              Array.isArray(parsedContract.parts)
+            ) {
+              moduleParts.set(parsedContract.id, parsedContract.parts);
+            }
           }
         } catch (error) {
           allValid = false;
@@ -181,6 +194,25 @@ export class ContractsService {
                 path: `dependencies.${i}.module_id`,
                 message: `Referenced module "${dep.module_id}" does not exist`,
               });
+            } else {
+              // Validate dependency part types
+              const referencedParts = moduleParts.get(dep.module_id);
+              if (dep.parts && Array.isArray(dep.parts)) {
+                for (let j = 0; j < dep.parts.length; j++) {
+                  const depPart = dep.parts[j];
+                  if (referencedParts) {
+                    const matchingPart = referencedParts.find(
+                      (p) => p.id === depPart.part_id,
+                    );
+                    if (matchingPart && matchingPart.type !== depPart.type) {
+                      errors.push({
+                        path: `dependencies.${i}.parts.${j}.type`,
+                        message: `Part type mismatch: expected "${matchingPart.type}" but got "${depPart.type}"`,
+                      });
+                    }
+                  }
+                }
+              }
             }
           }
         }
