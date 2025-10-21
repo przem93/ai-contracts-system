@@ -260,7 +260,12 @@ describe("ContractsController", () => {
         {
           fileName: "contract1.yml",
           filePath: "/path/to/contract1.yml",
-          content: { id: "test", type: "service" },
+          content: {
+            id: "test",
+            type: "service",
+            category: "api",
+            description: "Test service",
+          },
         },
       ];
 

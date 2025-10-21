@@ -1,0 +1,125 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "AppController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/test": {
+      "get": {
+        "operationId": "AppController_getTest",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/neo4j/verify": {
+      "get": {
+        "operationId": "AppController_verifyNeo4jConnection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/contracts": {
+      "get": {
+        "operationId": "ContractsController_getAllContracts",
+        "summary": "Get all contracts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns all contract files with their parsed content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContractFileDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
+    "/contracts/validate": {
+      "get": {
+        "operationId": "ContractsController_validateContracts",
+        "summary": "Validate all contracts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns validation results for all contract files"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "AI Contracts System API",
+    "description": "API for managing and validating technical dependency contracts",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "ContractFileDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "The name of the contract file",
+            "example": "example-contract.yml"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "The full path to the contract file",
+            "example": "/contracts/example-contract.yml"
+          },
+          "content": {
+            "type": "object",
+            "description": "The parsed contract content"
+          }
+        },
+        "required": [
+          "fileName",
+          "filePath",
+          "content"
+        ]
+      }
+    }
+  }
+}
