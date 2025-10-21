@@ -4,12 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:vite\" \"npm run watch:api\"",
-    "dev:vite": "vite",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "generate:api": "orval --config ./orval.config.ts",
-    "watch:api": "chokidar '../backend/openapi.json' -c 'npm run generate:api' --initial"
+    "generate:api": "orval --config ./orval.config.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
