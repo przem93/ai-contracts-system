@@ -100,6 +100,85 @@ This allows you to:
 - Organize contracts by domain or team
 - Ingest contracts from CI/CD pipelines
 
+## Frontend Application
+
+The frontend application provides a user-friendly **three-step workflow** for managing contract changes safely and effectively.
+
+### Contract Management Workflow
+
+#### Step 1: Review Contracts
+
+The first step allows you to review all contracts and detect changes compared to what's currently stored in the Neo4j database.
+
+**Key Features:**
+- 📋 Displays all current contract files for review
+- 🔍 Automatically compares contracts with the Neo4j database state
+- ⚡ Shows a "Verify Contracts" button **only when changes are detected**
+- 🔒 If no changes exist, the button is hidden and you cannot proceed to the next step
+- 📊 Provides visual indication of which contracts have been modified, added, or removed
+
+**User Flow:**
+1. Navigate to the Review Contracts page
+2. System automatically compares YAML files with database state
+3. If changes detected → "Verify Contracts" button appears
+4. If no changes → Button hidden, workflow ends here
+
+#### Step 2: Verify Contracts
+
+The second step validates the proposed contract changes before applying them to the database.
+
+**Key Features:**
+- ✅ Displays detailed verification results for all contract changes
+- 🔍 Validates contract structure, dependencies, and type consistency
+- 📝 Shows comprehensive validation messages (errors, warnings, success)
+- 🚀 User can **apply changes only when verification is successful**
+- 🔄 If verification fails, must go back to fix issues before proceeding
+
+**Validation Checks:**
+- Required fields present (`id`, `type`, `category`, `description`)
+- Part definitions are well-formed
+- Dependency references point to existing modules
+- Part type consistency across dependencies
+- No circular dependencies
+
+**User Flow:**
+1. Click "Verify Contracts" from Review step
+2. System validates all proposed changes
+3. Review validation results
+4. If successful → "Apply Changes" button appears
+5. If failed → Review errors and go back to fix
+
+#### Step 3: Apply Changes
+
+The final step applies verified changes to the Neo4j database and shows results.
+
+**Success Scenario:**
+- ✅ **Success page** displays when all changes are successfully applied
+- 📊 Shows summary of changes applied (added, modified, removed)
+- 🎉 Provides confirmation message
+- 🔄 Allows user to return to review new contracts
+
+**Error Scenario:**
+- ❌ **Error page** displays if any errors occurred during application
+- 📋 Shows detailed error messages explaining what went wrong
+- 💡 Provides guidance on how to resolve issues
+- 🔄 Allows user to retry or go back to review
+
+**User Flow:**
+1. Click "Apply Changes" from Verify step
+2. System attempts to update Neo4j database
+3. On success → See success page with change summary
+4. On error → See error page with detailed diagnostics
+
+### Workflow Benefits
+
+This three-step approach ensures:
+- **Safety**: No changes applied without validation
+- **Transparency**: Clear visibility into what will change
+- **Feedback**: Immediate validation results before database modifications
+- **Control**: Users can review and verify before committing changes
+- **Reliability**: Proper error handling with actionable guidance
+
 ## Setup
 
 1. Copy the environment configuration file:
@@ -122,6 +201,19 @@ This allows you to:
 
 ## Services
 
+### Frontend Application (React + Vite)
+
+The frontend application provides a web interface for managing contracts through a three-step workflow.
+
+**Default Port:** 8080 (configurable via `FRONTEND_PORT` in `.env`)
+
+**Key Features:**
+- 📋 Review contracts and detect changes
+- ✅ Validate contract changes before applying
+- 🚀 Apply verified changes to Neo4j database
+- 🎨 Modern UI built with React, TypeScript, and Material-UI
+- ⚡ Fast development with Vite
+
 ### Backend API (NestJS)
 
 The backend API runs on port 3000 (configurable via `BACKEND_PORT` in `.env`).
@@ -131,6 +223,7 @@ The backend API runs on port 3000 (configurable via `BACKEND_PORT` in `.env`).
 - `GET /` - Welcome message
 - `GET /health` - Health check endpoint
 - `GET /api/test` - Test endpoint (will be removed later)
+- `GET /contracts` - Get all parsed contract files
 
 ### Neo4j Database
 

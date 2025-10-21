@@ -1,0 +1,215 @@
+# 🧩 AI Contracts System
+
+## 🧠 Overview
+**AI Contracts System** is a backend–frontend platform that manages and visualizes **technical dependency contracts** across an application ecosystem.  
+It ingests **YAML contract files** — delivered from external repositories or services — and uses them to represent the **real-world structure and relationships** between modules, APIs, and even React components.
+
+The system transforms these YAML contracts into a **graph representation** stored in a Neo4j database, making it possible to explore, validate, and reason about dependencies programmatically or through a UI.
+
+---
+
+## 🎨 Frontend Application Workflow
+
+The frontend application provides a **three-step process** for building and managing contracts:
+
+### Step 1: Reviewing Contracts
+- **Purpose**: Review contracts and detect changes compared to what's stored in the Neo4j database
+- **Features**:
+  - Displays all current contracts for review
+  - Compares contracts with the current state in Neo4j database
+  - Shows a "Verify Contracts" button **only when changes are detected**
+  - If no changes exist, the button is hidden and user cannot proceed to the next step
+  - Provides visual indication of which contracts have been modified, added, or removed
+
+### Step 2: Verification
+- **Purpose**: Verify the validity of proposed contract changes
+- **Features**:
+  - Displays verification results for all contract changes
+  - Validates contract structure, dependencies, and type consistency
+  - Shows detailed validation messages (errors, warnings, success)
+  - User can **apply changes only when verification is successful**
+  - If verification fails, user must go back and fix issues before proceeding
+
+### Step 3: Apply Changes
+- **Purpose**: Apply verified changes to the Neo4j database
+- **Features**:
+  - **Success page**: Displays when all changes are successfully applied to the database
+    - Shows summary of changes applied
+    - Provides confirmation message
+    - Allows user to return to review new contracts
+  - **Error page**: Displays if any errors occurred during the application process
+    - Shows detailed error messages
+    - Explains what went wrong
+    - Provides guidance on how to resolve issues
+
+---
+
+## ⚙️ Key Features
+
+- **External YAML ingestion**  
+  The system accepts YAML files provided from outside sources (e.g. other repos or CI pipelines).
+
+- **Real-state reflection**  
+  Each YAML file describes the **actual current structure** of a project — its modules, components, and interdependencies.
+
+- **Configurable sources**  
+  YAML file locations are defined via an `.env` variable, e.g.:
+  ```bash
+  CONTRACTS_PATH=/contracts/**/*.yml
+  ```
+
+- **Change Detection**  
+  The system automatically detects differences between YAML contracts and the current database state.
+
+- **Contract Validation**  
+  Comprehensive validation ensures contracts are well-formed and dependencies are consistent.
+
+- **Graph Visualization**  
+  Dependencies are stored and can be visualized as a directed graph in Neo4j.
+
+---
+
+## 📝 Contract Definition Structure
+
+### Valid Contract Parameters
+
+Each YAML contract file must follow a specific structure to represent modules, components, and their dependencies accurately. Below is the complete specification of valid parameters:
+
+#### **Root Properties**
+
+| Property | Type | Required | Description |
+|----|---|----|----|
+| `id` | string | ✅ | **Unique identifier** for the contract. Used by other modules to reference this module in their dependencies. Must be unique across all contracts. |
+| `type` | string | ✅ | **Module type** (e.g., `controller`, `service`, `component`). Provides semantic information about the module's role. This helps AI models understand whether it's a backend controller, service layer, React.js frontend component, etc. |
+| `category` | string | ✅ | **Category classification** (e.g., `api`, `service`, `frontend`). Groups modules by their functional domain. Helps AI models understand the architectural layer this module belongs to. |
+| `description` | string | ✅ | **Human-readable description** of the module's purpose and functionality. Provides context for AI models to understand what this module does. |
+| `parts` | array | ❌ | **Module parts** - An array of sub-components or exportable elements within this module (e.g., functions, classes, exports). Each part can be independently referenced by dependent modules. If omitted, the module is treated as atomic. |
+| `dependencies` | array | ❌ | **Module dependencies** - An array of other modules that this module depends on. Dependencies are **unidirectional**: if module A lists module B in dependencies, it means A depends on B (A → B), not the reverse. |
+
+#### **Parts Structure** (`parts[]`)
+
+Each element in the `parts` array represents an exportable component of the module:
+
+| Property | Type | Required | Description |
+|----|---|----|----|
+| `id` | string | ✅ | **Part identifier** - Unique within this module. Used by dependent modules to reference this specific part. |
+| `type` | string | ✅ | **Part type** - Describes the nature of this part (e.g., `string`, `function`, `class`, `interface`). **CRITICAL**: This type must match exactly when other modules reference this part in their dependencies. Type mismatches indicate refactoring needs. |
+
+#### **Dependencies Structure** (`dependencies[]`)
+
+Each element in the `dependencies` array represents a dependency on another module:
+
+| Property | Type | Required | Description |
+|----|---|----|----|
+| `module_id` | string | ✅ | **Reference to another module** - Must match the `id` of an existing contract. This creates a directed edge in the dependency graph pointing to the referenced module. |
+| `parts` | array | ✅ | **Referenced parts** - List of specific parts from the referenced module that this module uses. A module doesn't need to use all parts of its dependency, only the required ones. |
+
+#### **Dependency Parts Structure** (`dependencies[].parts[]`)
+
+Each element specifies a part from the referenced module:
+
+| Property | Type | Required | Description |
+|----|---|----|----|
+| `part_id` | string | ✅ | **Part reference** - Must match the `id` of a part defined in the referenced module. |
+| `type` | string | ✅ | **Part type verification** - Must match the `type` of the part in the referenced module. **CRITICAL**: This enforces type consistency across dependencies. If types don't match, it signals that refactoring or updates are needed. |
+
+---
+
+### 📋 Valid Contract Examples
+
+#### Example 1: API Controller with Dependencies
+
+```yaml
+id: users-get
+type: controller
+description: Users get endpoint
+category: api
+parts:
+  - id: part
+    type: string
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: name
+        type: string
+```
+
+**Explanation**:
+- This contract defines a `users-get` controller (API endpoint)
+- It has one part with id `part` of type `string`
+- It depends on the `users-permissions` module
+- Specifically, it uses two parts from `users-permissions`: `id` and `name`, both of type `string`
+- The dependency relationship is unidirectional: `users-get` → `users-permissions`
+
+#### Example 2: Service Module (Dependency Target)
+
+```yaml
+id: users-permissions
+type: service
+description: Users permissions service
+category: service
+parts:
+  - id: id
+    type: string
+  - id: name
+    type: string
+```
+
+**Explanation**:
+- This contract defines a `users-permissions` service module
+- It exports two parts: `id` and `name`, both of type `string`
+- It has no dependencies (other modules depend on it)
+- This is the module referenced by `users-get` in Example 1
+
+---
+
+### 🎯 Key Concepts for AI Models
+
+#### 1. **Unidirectional Dependencies**
+Dependencies flow in one direction only. If module A lists module B in its `dependencies`, it creates the relationship A → B. Module B does not automatically depend on A.
+
+#### 2. **Part Type Matching**
+When module A references a part from module B in its dependencies, the `type` field in A's dependency specification **must exactly match** the `type` field of that part in B's definition. This ensures type safety and helps identify when changes in one module require updates in dependent modules.
+
+#### 3. **Granular Dependency Tracking**
+Modules don't need to depend on an entire module — they can specify exactly which `parts` they use. This enables fine-grained dependency analysis and impact assessment when parts change.
+
+#### 4. **Contract Identity**
+The `id` field serves as the unique identifier for the entire contract/module. It's used in `module_id` fields when establishing dependencies.
+
+#### 5. **Semantic Metadata**
+The `type`, `category`, and `description` fields provide semantic context that helps AI models understand:
+- The architectural role of each module
+- The domain or layer it belongs to
+- Its purpose and functionality
+
+This metadata is crucial for code generation, refactoring suggestions, and dependency validation.
+
+#### 6. **Change Detection Workflow**
+The frontend application workflow ensures safe contract updates:
+- Changes are detected by comparing YAML files with the Neo4j database state
+- Validation happens before any changes are applied
+- Users can only proceed when validation passes
+- Clear feedback is provided at each step (review, verify, apply)
+
+---
+
+## 🛠️ Development Guidelines
+
+### When Building Contract Management Features
+
+1. **Always validate contracts** before allowing users to apply changes
+2. **Show clear visual feedback** about what changed (added, modified, removed)
+3. **Block progression** when no changes exist or validation fails
+4. **Provide detailed error messages** when validation or application fails
+5. **Maintain audit trail** of contract changes over time
+
+### When Working with Dependencies
+
+1. **Enforce type matching** between dependency references and part definitions
+2. **Detect breaking changes** when part types are modified
+3. **Show dependency graphs** to visualize module relationships
+4. **Validate circular dependencies** and alert users
+5. **Track impact** of changes across the dependency graph
