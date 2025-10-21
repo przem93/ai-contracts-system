@@ -86,17 +86,27 @@ All acceptance criteria from the Linear issue have been successfully implemented
 
 #### Scripts Added
 - `generate:api` - Generate React Query client from OpenAPI spec
-- `watch:api` - Watch OpenAPI spec and auto-regenerate
-- `dev` - Run Vite + API watcher concurrently
-- `dev:vite` - Run only Vite dev server
+- `dev` - Run Vite dev server
 
-### 3. Root-Level Scripts
+### 3. Root-Level Scripts & Docker Integration
 
 #### Helper Script
 - **File**: `scripts/generate-api-client.sh`
   - Regenerates OpenAPI spec from backend
   - Regenerates frontend client from spec
   - Executable bash script
+
+#### Frontend Startup Script
+- **File**: `frontend/start.sh`
+  - Generates API client on Docker container startup
+  - Checks for OpenAPI spec in Docker and local paths
+  - Then starts the Vite dev server
+
+#### Docker Configuration
+- **File**: `docker-compose.yml`
+  - Frontend container mounts backend's `openapi.json`
+  - Frontend depends on backend being healthy
+  - API generation happens automatically on container startup
 
 #### Root Package.json
 - **File**: `package.json`
@@ -137,19 +147,28 @@ frontend/src/api/generated/
 
 ## 🚀 How to Use
 
-### Development Mode
+### Docker Compose Mode (Recommended)
+
+```bash
+docker-compose up
+```
+
+The frontend container will automatically:
+1. Generate the API client from backend's OpenAPI spec
+2. Start the Vite dev server
+
+### Local Development Mode
 
 ```bash
 # Terminal 1: Start backend
 cd backend
 npm run start:dev
 
-# Terminal 2: Start frontend (with auto-regeneration)
+# Terminal 2: Start frontend
 cd frontend
+npm run generate:api  # Run after backend API changes
 npm run dev
 ```
-
-The frontend will automatically regenerate the API client when the OpenAPI spec changes!
 
 ### Manual Regeneration
 
@@ -179,10 +198,10 @@ function MyComponent() {
 
 1. **Type Safety** - Full TypeScript types from backend to frontend
 2. **Auto-Complete** - IDE autocomplete for all API calls
-3. **Automatic Sync** - Changes to backend API automatically update frontend
+3. **Docker Integration** - API client auto-generates on container startup
 4. **React Query Integration** - Built-in caching, loading states, error handling
 5. **Git Committed** - Generated code is part of the repository
-6. **Developer Friendly** - Simple workflow with automatic regeneration
+6. **Developer Friendly** - Simple workflow, regenerate manually in local dev or automatically in Docker
 
 ## 📊 Test Results
 

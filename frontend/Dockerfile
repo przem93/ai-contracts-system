@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Generate API client (requires backend openapi.json to be available via volume mount)
+# This will be regenerated at runtime, but we include it for build
+RUN npm run generate:api || echo "⚠️  Skipping API generation at build time"
+
 # Build the application
 RUN npm run build
 

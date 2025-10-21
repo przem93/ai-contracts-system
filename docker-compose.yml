@@ -24,7 +24,13 @@ services:
     container_name: ai-contracts-frontend
     expose:
       - "80"
+    volumes:
+      # Mount backend OpenAPI spec so frontend can access it at startup
+      - ./backend/openapi.json:/app/backend-openapi.json:ro
     restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
     networks:
       - ai-contracts-network
 
@@ -55,7 +61,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

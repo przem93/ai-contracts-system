@@ -72,27 +72,35 @@ npm run generate:api
 
 ### Development Workflow
 
-#### Starting Development
+#### Starting Development with Docker Compose
 
-The frontend dev server now **automatically watches** for OpenAPI spec changes:
+When using Docker Compose, the API client is **automatically generated once at startup**:
+
+```bash
+# Start all services (backend, frontend, database)
+docker-compose up
+
+# The frontend container will:
+# 1. Generate the API client from backend's OpenAPI spec
+# 2. Start the Vite dev server
+```
+
+#### Starting Development Locally (without Docker)
 
 ```bash
 # Terminal 1: Start backend (generates OpenAPI spec)
 cd backend
 npm run start:dev
 
-# Terminal 2: Start frontend (with auto-regeneration)
+# Terminal 2: Generate API client, then start frontend
 cd frontend
+npm run generate:api  # Run once after backend API changes
 npm run dev
 ```
 
-The frontend `dev` script now runs two processes concurrently:
-1. Vite dev server
-2. OpenAPI spec watcher (automatically regenerates client when spec changes)
-
 #### Manual Regeneration
 
-If you need to manually regenerate the client:
+If you need to manually regenerate the client during local development:
 
 ```bash
 # From backend: Generate new OpenAPI spec
@@ -109,7 +117,9 @@ npm run generate:api
 
 #### When to Regenerate
 
-You need to regenerate when you:
+For **Docker deployments**: API client regenerates automatically on container startup.
+
+For **local development**: Manually regenerate when you:
 - ✏️ Add new API endpoints
 - ✏️ Modify existing endpoints
 - ✏️ Change request/response DTOs
@@ -272,8 +282,9 @@ AXIOS_INSTANCE.interceptors.request.use((config) => {
 
 1. **Generated files are committed to git** - This ensures everyone on the team has the same client
 2. **Don't manually edit generated files** - They will be overwritten on regeneration
-3. **Run generation after API changes** - Keep frontend in sync with backend
-4. **OpenAPI spec must be valid** - Invalid specs will cause generation to fail
+3. **Docker auto-regenerates** - Frontend container regenerates API client on startup
+4. **Local dev requires manual regeneration** - Run `npm run generate:api` after backend API changes
+5. **OpenAPI spec must be valid** - Invalid specs will cause generation to fail
 
 ## 🔍 Troubleshooting
 
