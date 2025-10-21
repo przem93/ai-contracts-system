@@ -1,22 +1,14 @@
 #!/bin/sh
 
-# Frontend startup script
+# Frontend startup script for Docker
 # Generates API client from backend OpenAPI spec, then starts the application
 
 echo "🚀 Starting frontend application..."
 echo "📌 NODE_ENV: ${NODE_ENV}"
 
-# Check for OpenAPI spec in multiple locations
-OPENAPI_PATH=""
-if [ -f "/app/backend-openapi.json" ]; then
-    OPENAPI_PATH="/app/backend-openapi.json"
-elif [ -f "../backend/openapi.json" ]; then
-    OPENAPI_PATH="../backend/openapi.json"
-fi
-
 # Generate API client from backend OpenAPI spec
-if [ -n "$OPENAPI_PATH" ]; then
-    echo "📡 Generating API client from OpenAPI spec at: $OPENAPI_PATH"
+if [ -f "/app/backend-openapi.json" ]; then
+    echo "📡 Generating API client from OpenAPI spec..."
     npm run generate:api
     if [ $? -eq 0 ]; then
         echo "✅ API client generated successfully!"
@@ -25,11 +17,9 @@ if [ -n "$OPENAPI_PATH" ]; then
         exit 1
     fi
 else
-    echo "⚠️  Warning: OpenAPI spec not found"
-    echo "⚠️  Checked locations:"
-    echo "    - /app/backend-openapi.json (Docker)"
-    echo "    - ../backend/openapi.json (Local)"
-    echo "⚠️  Skipping API client generation. Using existing generated files."
+    echo "❌ OpenAPI spec not found at /app/backend-openapi.json"
+    echo "❌ Cannot start frontend without API client"
+    exit 1
 fi
 
 # Start the application based on environment

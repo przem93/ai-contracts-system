@@ -1,23 +1,9 @@
 import { defineConfig } from "orval";
-import * as fs from "fs";
-
-// Determine OpenAPI spec path based on environment
-// In Docker: /app/backend-openapi.json
-// Local dev: ../backend/openapi.json
-const getOpenApiPath = () => {
-  const dockerPath = "/app/backend-openapi.json";
-  const localPath = "../backend/openapi.json";
-  
-  if (fs.existsSync(dockerPath)) {
-    return dockerPath;
-  }
-  return localPath;
-};
 
 export default defineConfig({
   "ai-contracts-api": {
     input: {
-      target: getOpenApiPath(),
+      target: "/app/backend-openapi.json",
     },
     output: {
       mode: "tags-split",

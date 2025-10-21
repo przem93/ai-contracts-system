@@ -2,6 +2,8 @@
 
 This project uses [Orval](https://orval.dev/) to automatically generate a type-safe React Query client from the NestJS backend's OpenAPI specification.
 
+**Note**: This application **only runs with Docker Compose**. API client generation happens automatically on container startup.
+
 ## 📋 Overview
 
 The setup follows this flow:
@@ -9,13 +11,20 @@ The setup follows this flow:
 NestJS Backend → OpenAPI Spec → Orval → React Query Client
 ```
 
+When you run `docker-compose up`:
+1. Backend starts and generates OpenAPI spec
+2. Frontend container mounts the OpenAPI spec
+3. Frontend generates React Query client on startup
+4. Frontend serves the application
+
 ## 🎯 Features
 
 ✅ **Type-safe API client** - Fully typed requests and responses  
 ✅ **React Query hooks** - Ready-to-use hooks for data fetching  
-✅ **Automatic generation** - Client regenerates when API changes  
+✅ **Automatic generation** - Client regenerates on every Docker startup  
 ✅ **Committed to git** - Generated code is part of the repository  
 ✅ **OpenAPI compliant** - Based on Swagger/OpenAPI 3.0 specification  
+✅ **Docker-only** - Simplified setup, no local dev complexity  
 
 ## 📁 Project Structure
 
@@ -52,78 +61,47 @@ NestJS Backend → OpenAPI Spec → Orval → React Query Client
 
 ## 🚀 How to Use
 
-### Initial Setup
+### Starting the Application
 
-The setup is already complete! But if you need to regenerate everything:
-
-```bash
-# Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
-
-# Generate OpenAPI spec from backend
-cd backend
-npm run generate:openapi
-
-# Generate React Query client
-cd ../frontend
-npm run generate:api
-```
-
-### Development Workflow
-
-#### Starting Development with Docker Compose
-
-When using Docker Compose, the API client is **automatically generated once at startup**:
+The application **only runs with Docker Compose**:
 
 ```bash
 # Start all services (backend, frontend, database)
 docker-compose up
 
-# The frontend container will:
-# 1. Generate the API client from backend's OpenAPI spec
-# 2. Start the Vite dev server
+# The system will automatically:
+# 1. Start Neo4j database
+# 2. Start NestJS backend (generates OpenAPI spec)
+# 3. Start frontend container which:
+#    - Generates the API client from backend's OpenAPI spec
+#    - Starts the Vite dev server
 ```
 
-#### Starting Development Locally (without Docker)
+### Stopping the Application
 
 ```bash
-# Terminal 1: Start backend (generates OpenAPI spec)
-cd backend
-npm run start:dev
+# Stop all services
+docker-compose down
 
-# Terminal 2: Generate API client, then start frontend
-cd frontend
-npm run generate:api  # Run once after backend API changes
-npm run dev
+# Stop and remove volumes (fresh start)
+docker-compose down -v
 ```
 
-#### Manual Regeneration
+### When Backend API Changes
 
-If you need to manually regenerate the client during local development:
+When you modify backend API endpoints:
 
-```bash
-# From backend: Generate new OpenAPI spec
-cd backend
-npm run generate:openapi
+1. Restart the Docker containers:
+   ```bash
+   docker-compose restart
+   ```
 
-# From frontend: Regenerate React Query client
-cd frontend
-npm run generate:api
+2. Or rebuild if you changed dependencies:
+   ```bash
+   docker-compose up --build
+   ```
 
-# Or use the helper script from root
-npm run generate:api
-```
-
-#### When to Regenerate
-
-For **Docker deployments**: API client regenerates automatically on container startup.
-
-For **local development**: Manually regenerate when you:
-- ✏️ Add new API endpoints
-- ✏️ Modify existing endpoints
-- ✏️ Change request/response DTOs
-- ✏️ Update API documentation
+The frontend will automatically regenerate the API client with your changes!
 
 ### Using the Generated Client
 
@@ -280,35 +258,38 @@ AXIOS_INSTANCE.interceptors.request.use((config) => {
 
 ## 🚨 Important Notes
 
-1. **Generated files are committed to git** - This ensures everyone on the team has the same client
-2. **Don't manually edit generated files** - They will be overwritten on regeneration
-3. **Docker auto-regenerates** - Frontend container regenerates API client on startup
-4. **Local dev requires manual regeneration** - Run `npm run generate:api` after backend API changes
-5. **OpenAPI spec must be valid** - Invalid specs will cause generation to fail
+1. **Docker Compose only** - This application only runs with Docker Compose
+2. **Generated files are committed to git** - This ensures everyone on the team has the same client
+3. **Don't manually edit generated files** - They will be overwritten on regeneration
+4. **Auto-regenerates on startup** - Frontend container regenerates API client every time it starts
+5. **OpenAPI spec must be valid** - Invalid specs will cause frontend container to fail startup
 
 ## 🔍 Troubleshooting
 
-### "Module not found" errors
+### Frontend container fails to start
 
+Check the logs:
 ```bash
-# Regenerate the client
-cd frontend
-npm run generate:api
+docker logs ai-contracts-frontend
 ```
+
+Look for API generation errors. If the OpenAPI spec is missing or invalid, the frontend will fail to start.
 
 ### Type errors after API changes
 
-1. Regenerate OpenAPI spec: `cd backend && npm run generate:openapi`
-2. Regenerate client: `cd frontend && npm run generate:api`
-3. Restart your dev server
-
-### OpenAPI spec is outdated
-
-Make sure you regenerate the spec after backend changes:
+Rebuild the containers:
 ```bash
-cd backend
-npm run generate:openapi
+docker-compose up --build
 ```
+
+### API client seems outdated
+
+Restart the frontend container:
+```bash
+docker-compose restart frontend
+```
+
+The API client will regenerate with the latest backend changes.
 
 ## 📚 Resources
 
