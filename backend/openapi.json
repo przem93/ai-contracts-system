@@ -12,28 +12,6 @@
         }
       }
     },
-    "/health": {
-      "get": {
-        "operationId": "AppController_getHealth",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        }
-      }
-    },
-    "/test": {
-      "get": {
-        "operationId": "AppController_getTest",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        }
-      }
-    },
     "/neo4j/verify": {
       "get": {
         "operationId": "AppController_verifyNeo4jConnection",

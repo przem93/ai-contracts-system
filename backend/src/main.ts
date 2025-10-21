@@ -24,7 +24,6 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log(`🚀 Backend server is running on: http://localhost:${port}`);
-  console.log(`📋 Health check available at: http://localhost:${port}/health`);
   console.log(`📚 API documentation available at: http://localhost:${port}/api`);
 }
 
