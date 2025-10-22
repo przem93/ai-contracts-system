@@ -32,7 +32,7 @@ export const appControllerGetHello = (
       
       
       return customAxiosInstance<void>(
-      {url: `http://localhost:3000/api`, method: 'GET', signal
+      {url: `http://localhost/api`, method: 'GET', signal
     },
       );
     }
@@ -42,7 +42,7 @@ export const appControllerGetHello = (
 
 export const getAppControllerGetHelloQueryKey = () => {
     return [
-    `http://localhost:3000/api`
+    `http://localhost/api`
     ] as const;
     }
 
@@ -117,7 +117,7 @@ export const appControllerVerifyNeo4jConnection = (
       
       
       return customAxiosInstance<void>(
-      {url: `http://localhost:3000/api/neo4j/verify`, method: 'GET', signal
+      {url: `http://localhost/api/neo4j/verify`, method: 'GET', signal
     },
       );
     }
@@ -127,7 +127,7 @@ export const appControllerVerifyNeo4jConnection = (
 
 export const getAppControllerVerifyNeo4jConnectionQueryKey = () => {
     return [
-    `http://localhost:3000/api/neo4j/verify`
+    `http://localhost/api/neo4j/verify`
     ] as const;
     }
 

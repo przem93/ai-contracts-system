@@ -3,9 +3,9 @@ import axios, { AxiosRequestConfig } from "axios";
 // Get API URL from environment or use default
 const getApiUrl = () => {
   if (typeof import.meta !== "undefined" && import.meta.env) {
-    return import.meta.env.VITE_API_URL || "http://localhost:3000";
+    return import.meta.env.VITE_API_URL || "http://localhost";
   }
-  return "http://localhost:3000";
+  return "http://localhost";
 };
 
 export const AXIOS_INSTANCE = axios.create({

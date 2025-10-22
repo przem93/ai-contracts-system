@@ -39,7 +39,7 @@ export const contractsControllerGetAllContracts = (
       
       
       return customAxiosInstance<ContractFileDto[]>(
-      {url: `http://localhost:3000/api/contracts`, method: 'GET', signal
+      {url: `http://localhost/api/contracts`, method: 'GET', signal
     },
       );
     }
@@ -49,7 +49,7 @@ export const contractsControllerGetAllContracts = (
 
 export const getContractsControllerGetAllContractsQueryKey = () => {
     return [
-    `http://localhost:3000/api/contracts`
+    `http://localhost/api/contracts`
     ] as const;
     }
 
@@ -130,7 +130,7 @@ export const contractsControllerValidateContracts = (
       
       
       return customAxiosInstance<void>(
-      {url: `http://localhost:3000/api/contracts/validate`, method: 'GET', signal
+      {url: `http://localhost/api/contracts/validate`, method: 'GET', signal
     },
       );
     }
@@ -140,7 +140,7 @@ export const contractsControllerValidateContracts = (
 
 export const getContractsControllerValidateContractsQueryKey = () => {
     return [
-    `http://localhost:3000/api/contracts/validate`
+    `http://localhost/api/contracts/validate`
     ] as const;
     }
 
