@@ -9,6 +9,9 @@ async function generateOpenApiSpec() {
     logger: false, // Disable logging to avoid noise
   });
 
+  // Set global API prefix (same as in main.ts)
+  app.setGlobalPrefix("api");
+
   const config = new DocumentBuilder()
     .setTitle("AI Contracts System API")
     .setDescription(

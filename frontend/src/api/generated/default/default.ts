@@ -9,8 +9,13 @@ import {
   useQuery
 } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
+  QueryClient,
   QueryFunction,
   QueryKey,
+  UndefinedInitialDataOptions,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -27,7 +32,7 @@ export const appControllerGetHello = (
       
       
       return customAxiosInstance<void>(
-      {url: `http://localhost:3000/`, method: 'GET', signal
+      {url: `http://localhost:3000/api`, method: 'GET', signal
     },
       );
     }
@@ -37,12 +42,12 @@ export const appControllerGetHello = (
 
 export const getAppControllerGetHelloQueryKey = () => {
     return [
-    `http://localhost:3000/`
+    `http://localhost:3000/api`
     ] as const;
     }
 
     
-export const getAppControllerGetHelloQueryOptions = <TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>, }
+export const getAppControllerGetHelloQueryOptions = <TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -57,22 +62,46 @@ const {query: queryOptions} = options ?? {};
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type AppControllerGetHelloQueryResult = NonNullable<Awaited<ReturnType<typeof appControllerGetHello>>>
 export type AppControllerGetHelloQueryError = unknown
 
 
+export function useAppControllerGetHello<TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof appControllerGetHello>>,
+          TError,
+          Awaited<ReturnType<typeof appControllerGetHello>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAppControllerGetHello<TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof appControllerGetHello>>,
+          TError,
+          Awaited<ReturnType<typeof appControllerGetHello>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAppControllerGetHello<TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useAppControllerGetHello<TData = Awaited<ReturnType<typeof appControllerGetHello>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>, }
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerGetHello>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getAppControllerGetHelloQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 
@@ -88,7 +117,7 @@ export const appControllerVerifyNeo4jConnection = (
       
       
       return customAxiosInstance<void>(
-      {url: `http://localhost:3000/neo4j/verify`, method: 'GET', signal
+      {url: `http://localhost:3000/api/neo4j/verify`, method: 'GET', signal
     },
       );
     }
@@ -98,12 +127,12 @@ export const appControllerVerifyNeo4jConnection = (
 
 export const getAppControllerVerifyNeo4jConnectionQueryKey = () => {
     return [
-    `http://localhost:3000/neo4j/verify`
+    `http://localhost:3000/api/neo4j/verify`
     ] as const;
     }
 
     
-export const getAppControllerVerifyNeo4jConnectionQueryOptions = <TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>, }
+export const getAppControllerVerifyNeo4jConnectionQueryOptions = <TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -118,22 +147,46 @@ const {query: queryOptions} = options ?? {};
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type AppControllerVerifyNeo4jConnectionQueryResult = NonNullable<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>>
 export type AppControllerVerifyNeo4jConnectionQueryError = unknown
 
 
+export function useAppControllerVerifyNeo4jConnection<TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>,
+          TError,
+          Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAppControllerVerifyNeo4jConnection<TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>,
+          TError,
+          Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAppControllerVerifyNeo4jConnection<TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useAppControllerVerifyNeo4jConnection<TData = Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>, }
-  
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof appControllerVerifyNeo4jConnection>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getAppControllerVerifyNeo4jConnectionQueryOptions(options)
 
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   query.queryKey = queryOptions.queryKey ;
 

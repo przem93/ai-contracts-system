@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/": {
+    "/api": {
       "get": {
         "operationId": "AppController_getHello",
         "parameters": [],
@@ -12,7 +12,7 @@
         }
       }
     },
-    "/neo4j/verify": {
+    "/api/neo4j/verify": {
       "get": {
         "operationId": "AppController_verifyNeo4jConnection",
         "parameters": [],
@@ -23,7 +23,7 @@
         }
       }
     },
-    "/contracts": {
+    "/api/contracts": {
       "get": {
         "operationId": "ContractsController_getAllContracts",
         "summary": "Get all contracts",
@@ -48,7 +48,7 @@
         ]
       }
     },
-    "/contracts/validate": {
+    "/api/contracts/validate": {
       "get": {
         "operationId": "ContractsController_validateContracts",
         "summary": "Validate all contracts",
