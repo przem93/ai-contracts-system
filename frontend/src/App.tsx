@@ -94,10 +94,6 @@ function App() {
               )}
             </CardContent>
           </Card>
-          
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            ✅ Frontend using auto-generated React Query client from OpenAPI
-          </Typography>
         </Stack>
       </Box>
     </Container>
