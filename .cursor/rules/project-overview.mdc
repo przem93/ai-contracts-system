@@ -149,3 +149,73 @@ The `type`, `category`, and `description` fields provide semantic context that h
 
 This metadata is crucial for code generation, refactoring suggestions, and dependency validation.
 
+---
+
+## 🎨 Frontend Application Workflow
+
+The frontend application provides a **three-step process** for building and managing contracts:
+
+### Step 1: Reviewing Contracts
+- **Purpose**: Review contracts and detect changes compared to what's stored in the Neo4j database
+- **Features**:
+  - Displays all current contracts for review
+  - Compares contracts with the current state in Neo4j database
+  - Shows a "Verify Contracts" button **only when changes are detected**
+  - If no changes exist, the button is hidden and user cannot proceed to the next step
+  - Provides visual indication of which contracts have been modified, added, or removed
+
+### Step 2: Verification
+- **Purpose**: Verify the validity of proposed contract changes
+- **Features**:
+  - Displays verification results for all contract changes
+  - Validates contract structure, dependencies, and type consistency
+  - Shows detailed validation messages (errors, warnings, success)
+  - User can **apply changes only when verification is successful**
+  - If verification fails, user must go back and fix issues before proceeding
+
+### Step 3: Apply Changes
+- **Purpose**: Apply verified changes to the Neo4j database
+- **Features**:
+  - **Success page**: Displays when all changes are successfully applied to the database
+    - Shows summary of changes applied
+    - Provides confirmation message
+    - Allows user to return to review new contracts
+  - **Error page**: Displays if any errors occurred during the application process
+    - Shows detailed error messages
+    - Explains what went wrong
+    - Provides guidance on how to resolve issues
+
+---
+
+## 🚀 Running the Project
+
+**Docker Compose is the only official option** to run this project. All services (frontend, backend, Neo4j database) are orchestrated through Docker Compose.
+
+### API Namespace
+
+The backend API is running under the **`/api` namespace URL**. All API endpoints are prefixed with `/api`.
+
+For example:
+- Contracts endpoint: `http://localhost:3000/api/contracts`
+- Health check: `http://localhost:3000/api/health`
+
+---
+
+## 🛠️ Development Guidelines
+
+### When Building Contract Management Features
+
+1. **Always validate contracts** before allowing users to apply changes
+2. **Show clear visual feedback** about what changed (added, modified, removed)
+3. **Block progression** when no changes exist or validation fails
+4. **Provide detailed error messages** when validation or application fails
+5. **Maintain audit trail** of contract changes over time
+
+### When Working with Dependencies
+
+1. **Enforce type matching** between dependency references and part definitions
+2. **Detect breaking changes** when part types are modified
+3. **Show dependency graphs** to visualize module relationships
+4. **Validate circular dependencies** and alert users
+5. **Track impact** of changes across the dependency graph
+
