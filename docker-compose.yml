@@ -93,7 +93,7 @@ services:
     environment:
       - NODE_ENV=development
       - CI=true
-      - PLAYWRIGHT_BASE_URL=http://proxy
+      - PLAYWRIGHT_BASE_URL=http://frontend
     volumes:
       # Mount source code and test files
       - ./frontend/src:/app/src:rw
@@ -112,7 +112,7 @@ services:
       - |
         echo "Waiting for application to be ready..."
         echo "Testing connection to proxy..."
-        wget --spider --tries=10 --timeout=2 --waitretry=3 http://proxy/ || echo "Warning: Could not connect to proxy"
+        wget --spider --tries=10 --timeout=2 --waitretry=3 http://frontend/ || echo "Warning: Could not connect to frontend"
         echo "Starting tests..."
         npx playwright test --reporter=list,html
     depends_on:
