@@ -1,17 +1,19 @@
-import { useState } from 'react'
 import { 
   Container, 
   Typography, 
-  Button, 
   Card, 
   CardContent, 
   Box,
-  Stack 
+  Stack,
+  CircularProgress,
+  Alert,
+  Chip
 } from '@mui/material'
-import { Add } from '@mui/icons-material'
+import { useContractsControllerGetAllContracts } from './api/generated/contracts/contracts'
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Use the generated React Query hook to fetch contracts
+  const { data: contracts, isLoading, error } = useContractsControllerGetAllContracts()
 
   return (
     <Container maxWidth="md">
@@ -24,7 +26,7 @@ function App() {
         textAlign: 'center',
         py: 4
       }}>
-        <Stack spacing={3} alignItems="center">
+        <Stack spacing={3} alignItems="center" sx={{ width: '100%' }}>
           <Typography 
             variant="h2" 
             component="h1" 
@@ -40,26 +42,58 @@ function App() {
           </Typography>
           
           <Typography variant="h5" color="text.secondary">
-            AI Coder Agent Contract System
+            AI Coder Agent Contract Systems
           </Typography>
           
-          <Card sx={{ minWidth: 300, mt: 2 }}>
+          <Card sx={{ width: '100%', mt: 2 }}>
             <CardContent>
-              <Button 
-                variant="contained" 
-                color="primary"
-                size="large"
-                startIcon={<Add />}
-                onClick={() => setCount((count) => count + 1)}
-              >
-                Count is {count}
-              </Button>
+              <Typography variant="h6" gutterBottom>
+                📋 Contracts List
+              </Typography>
+              
+              {isLoading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              )}
+              
+              {error && (
+                <Alert severity="error">
+                  Error loading contracts: {error instanceof Error ? error.message : 'Unknown error'}
+                </Alert>
+              )}
+              
+              {contracts && contracts.length === 0 && (
+                <Alert severity="info">
+                  No contracts found
+                </Alert>
+              )}
+              
+              {contracts && contracts.length > 0 && (
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                  {contracts.map((contract, index) => (
+                    <Card key={index} variant="outlined">
+                      <CardContent>
+                        <Typography variant="subtitle1" gutterBottom>
+                          📄 {contract.fileName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Path: {contract.filePath}
+                        </Typography>
+                        {contract.content && (
+                          <Box sx={{ mt: 1 }}>
+                            <Chip label={`ID: ${contract.content.id}`} size="small" sx={{ mr: 1 }} />
+                            <Chip label={`Type: ${contract.content.type}`} size="small" sx={{ mr: 1 }} />
+                            <Chip label={`Category: ${contract.content.category}`} size="small" />
+                          </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              )}
             </CardContent>
           </Card>
-          
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Frontend is running with Vite + React + TypeScript + Material UI
-          </Typography>
         </Stack>
       </Box>
     </Container>

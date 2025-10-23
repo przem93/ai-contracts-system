@@ -4,7 +4,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import { glob } from "glob";
-import { ContractSchema } from "./contract.schema";
+import { ContractSchema, Contract } from "./contract.schema";
+import { ContractFileDto } from "./dto/contract-response.dto";
 
 @Injectable()
 export class ContractsService {
@@ -12,7 +13,7 @@ export class ContractsService {
 
   constructor(private configService: ConfigService) {}
 
-  async getAllContracts(): Promise<any[]> {
+  async getAllContracts(): Promise<ContractFileDto[]> {
     const contractsPath = this.configService.get<string>("CONTRACTS_PATH");
 
     if (!contractsPath) {
@@ -38,11 +39,11 @@ export class ContractsService {
       this.logger.log(`Found ${files.length} contract file(s)`);
 
       // Parse each YAML file
-      const contracts = [];
+      const contracts: ContractFileDto[] = [];
       for (const file of files) {
         try {
           const fileContent = fs.readFileSync(file, "utf8");
-          const parsedContract = yaml.load(fileContent);
+          const parsedContract = yaml.load(fileContent) as Contract;
 
           contracts.push({
             fileName: path.basename(file),
