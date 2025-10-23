@@ -21,7 +21,7 @@ services:
     expose:
       - "80"
     environment:
-      - NODE_ENV=${NODE_ENV}
+      - NODE_ENV=${NODE_ENV:-production}
     volumes:
       - ./frontend:/usr/src/app
       - /usr/src/app/node_modules
@@ -111,7 +111,9 @@ services:
       - -c
       - |
         echo "Waiting for application to be ready..."
-        sleep 5
+        echo "Testing connection to proxy..."
+        wget --spider --tries=10 --timeout=2 --waitretry=3 http://proxy/ || echo "Warning: Could not connect to proxy"
+        echo "Starting tests..."
         npx playwright test --reporter=list,html
     depends_on:
       proxy:

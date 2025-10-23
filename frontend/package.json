@@ -4,9 +4,9 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite dev --host",
+    "dev": "vite dev --host 0.0.0.0 --port 80",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --host 0.0.0.0 --port 80",
     "generate:api": "orval --config ./orval.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
