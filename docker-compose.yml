@@ -85,6 +85,38 @@ services:
     networks:
       - ai-contracts-network
 
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    container_name: ai-contracts-frontend-test
+    environment:
+      - NODE_ENV=development
+      - CI=true
+      - PLAYWRIGHT_BASE_URL=http://proxy:80
+    volumes:
+      # Mount source code and test files
+      - ./frontend/src:/app/src:rw
+      - ./frontend/tests:/app/tests:rw
+      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
+      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json:ro
+      - ./frontend/playwright.config.ts:/app/playwright.config.ts:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/index.html:/app/index.html:ro
+      # Mount directory for test results and reports
+      - ./frontend/playwright-report:/app/playwright-report:rw
+      - ./frontend/test-results:/app/test-results:rw
+    command: ["npx", "playwright", "test", "--reporter=list,html"]
+    depends_on:
+      proxy:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    profiles:
+      - development
+    networks:
+      - ai-contracts-network
+
   graph-db:
     image: neo4j:5.15.0
     container_name: ai-contracts-graph-db

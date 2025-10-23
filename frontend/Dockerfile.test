@@ -1,0 +1,36 @@
+# Dockerfile for running Playwright E2E tests
+# This is optimized for development and testing purposes only
+
+FROM mcr.microsoft.com/playwright:v1.48.0-jammy
+
+WORKDIR /app
+
+# Install tini for proper signal handling
+RUN apt-get update && apt-get install -y tini && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for testing)
+RUN npm ci
+
+# Copy necessary configuration files
+COPY tsconfig.json ./
+COPY tsconfig.node.json ./
+COPY playwright.config.ts ./
+COPY vite.config.ts ./
+
+# Copy source code and tests (will be overridden by volume mount in development)
+COPY src ./src
+COPY tests ./tests
+COPY index.html ./
+
+# Install Playwright browsers (already included in base image, but ensure they're up to date)
+RUN npx playwright install --with-deps chromium
+
+# Use tini to handle signals properly
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Default command (can be overridden in docker-compose.yml)
+# Note: Using --headed is not possible in Docker without X server
+CMD ["npx", "playwright", "test", "--reporter=list"]

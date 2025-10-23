@@ -250,12 +250,14 @@ NODE_ENV=development docker-compose up --build
 
 **Note:** The hot reload feature uses NestJS's built-in watch mode (`--watch` flag) and only activates when `NODE_ENV` is set to `development`. The `start.sh` script automatically detects the environment and runs the appropriate command.
 
-### Running Tests in Watch Mode with Docker
+### Running Tests with Docker
+
+#### Backend Unit Tests in Watch Mode
 
 A dedicated Docker service is available for running backend tests in watch mode during development:
 
 ```bash
-# Start the test watch service
+# Start the backend test watch service
 docker-compose --profile development up backend-test-watch
 
 # View test output
@@ -273,6 +275,37 @@ docker-compose logs -f backend-test-watch
 ```bash
 docker-compose stop backend-test-watch
 ```
+
+#### Frontend Integration Tests with Playwright
+
+The frontend integration tests use Playwright and follow the Page Object Model pattern for maintainability:
+
+```bash
+# Run frontend integration tests (requires services to be running)
+docker-compose --profile development run --rm frontend-test
+
+# View test reports (after running tests)
+open frontend/playwright-report/index.html
+```
+
+**Features:**
+- ✅ Playwright for reliable E2E testing
+- ✅ Page Object Model pattern for reusable test components
+- ✅ Mock API responses for predictable tests
+- ✅ Comprehensive test coverage for contracts listing
+- ✅ Screenshots and videos on test failures
+- ✅ HTML and list reporters
+
+**Test Structure:**
+```
+frontend/tests/
+├── pages/               # Page object classes
+├── components/          # Reusable component abstractions
+├── fixtures/            # Test data and mocks
+└── *.spec.ts           # Test specifications
+```
+
+For more details on frontend tests, see [frontend/tests/README.md](./frontend/tests/README.md).
 
 For more details on development workflows, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
