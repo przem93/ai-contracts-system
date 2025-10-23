@@ -72,7 +72,7 @@ function App() {
               {contracts && contracts.length > 0 && (
                 <Stack spacing={2} sx={{ mt: 2 }}>
                   {contracts.map((contract, index) => (
-                    <Card key={index} variant="outlined">
+                    <Card key={index} variant="outlined" data-testid="contract-card">
                       <CardContent>
                         <Typography variant="subtitle1" gutterBottom>
                           📄 {contract.fileName}

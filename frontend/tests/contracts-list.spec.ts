@@ -4,6 +4,8 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { Alert } from './components/Alert';
 import { mockContracts, mockApiResponses } from './fixtures/contracts-data';
 
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 test.describe('Contracts List Page', () => {
   let contractsPage: ContractsListPage;
 
@@ -32,17 +34,23 @@ test.describe('Contracts List Page', () => {
   });
 
   test('should show loading spinner while fetching contracts', async ({ page }) => {
-    // Intercept the API call to delay the response
-    await page.route('**/api/contracts', async (route) => {
-      await page.waitForTimeout(1000); // Delay for 1 second
-      await route.continue();
-    });
+    try {
+      await page.route('**/api/contracts', async (route) => {
+        await delay(10000);
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        });
+      });
 
-    await contractsPage.navigate();
-    
-    // Verify loading spinner is visible initially
-    const spinner = new LoadingSpinner(contractsPage.loadingSpinner);
-    await spinner.verifyIsVisible();
+      await contractsPage.navigate();
+
+      const spinner = new LoadingSpinner(contractsPage.loadingSpinner);
+      await spinner.verifyIsVisible();
+    } finally {
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+    }
   });
 
   test('should display contracts when API returns data', async ({ page }) => {

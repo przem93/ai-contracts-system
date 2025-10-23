@@ -15,7 +15,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   
   // Retry on CI only
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 0 : 0,
   
   // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
@@ -51,17 +51,4 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-
-  // Run local dev server before starting the tests (only when not using Docker)
-  // In Docker, services are already running
-  ...(process.env.CI
-    ? {}
-    : {
-        webServer: {
-          command: 'npm run dev',
-          url: 'http://localhost:5173',
-          reuseExistingServer: true,
-          timeout: 120 * 1000,
-        },
-      }),
 });

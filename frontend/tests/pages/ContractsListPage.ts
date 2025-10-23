@@ -21,13 +21,13 @@ export class ContractsListPage extends BasePage {
     
     // Initialize locators
     this.pageTitle = page.getByRole('heading', { name: 'AI Contracts System', level: 1 });
-    this.pageSubtitle = page.getByRole('heading', { name: 'AI Coder Agent Contract Systems', level: 2 });
+    this.pageSubtitle = page.getByRole('heading', { name: 'AI Coder Agent Contract Systems', level: 5 });
     this.contractsCard = page.locator('.MuiCard-root').first();
     this.contractsCardTitle = page.getByRole('heading', { name: '📋 Contracts List' });
     this.loadingSpinner = page.getByRole('progressbar');
     this.errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error loading contracts' });
     this.noContractsAlert = page.locator('[role="alert"]').filter({ hasText: 'No contracts found' });
-    this.contractCards = page.locator('.MuiCard-root[class*="MuiCard-root"]').nth(1).locator('.MuiCard-root');
+    this.contractCards = page.getByTestId('contract-card');
   }
 
   /**
