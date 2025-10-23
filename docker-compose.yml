@@ -16,14 +16,15 @@ services:
       - ai-contracts-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: ai-contracts-frontend
     expose:
       - "80"
+    environment:
+      - NODE_ENV=${NODE_ENV}
     volumes:
-      # Mount backend OpenAPI spec so frontend can access it at startup
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
       - ./backend/openapi.json:/app/backend-openapi.json:ro
     restart: unless-stopped
     depends_on:
@@ -33,9 +34,7 @@ services:
       - ai-contracts-network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     container_name: ai-contracts-backend
     expose:
       - "3000"
@@ -48,10 +47,8 @@ services:
       # CONTRACTS_PATH should be a glob pattern inside the container
       - CONTRACTS_PATH=${CONTRACTS_PATH:-/contracts/**/*.yml}
     volumes:
-      # Mount source code for hot reload in development mode
-      - ./backend/src:/app/src:${VOLUME_MODE:-ro}
-      - ./backend/tsconfig.json:/app/tsconfig.json:ro
-      - ./backend/nest-cli.json:/app/nest-cli.json:ro
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
       # Mount contracts directory - CONTRACTS_HOST_DIR should be a directory path without glob
       - ${CONTRACTS_HOST_DIR:-./contracts}:/contracts:ro
     depends_on:

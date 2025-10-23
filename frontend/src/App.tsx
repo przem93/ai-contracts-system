@@ -42,7 +42,7 @@ function App() {
           </Typography>
           
           <Typography variant="h5" color="text.secondary">
-            AI Coder Agent Contract System
+            AI Coder Agent Contract Systems
           </Typography>
           
           <Card sx={{ width: '100%', mt: 2 }}>

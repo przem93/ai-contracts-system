@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite dev --host",
     "build": "vite build",
     "preview": "vite preview",
     "generate:api": "orval --config ./orval.config.ts"
