@@ -28,5 +28,14 @@ if [ "$NODE_ENV" = "development" ]; then
     npm run dev
 else
     echo "🏭 Running in PRODUCTION mode"
-    npm run preview
+    echo "🔨 Building application..."
+    npm run build
+    if [ $? -eq 0 ]; then
+        echo "✅ Build completed successfully!"
+        echo "🚀 Starting preview server..."
+        npm run preview -- --host 0.0.0.0 --port 80
+    else
+        echo "❌ Build failed"
+        exit 1
+    fi
 fi

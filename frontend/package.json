@@ -6,8 +6,12 @@
   "scripts": {
     "dev": "vite dev --host",
     "build": "vite build",
-    "preview": "vite preview",
-    "generate:api": "orval --config ./orval.config.ts"
+    "preview": "vite preview --host 0.0.0.0 --port 80",
+    "generate:api": "orval --config ./orval.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,6 +24,7 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
