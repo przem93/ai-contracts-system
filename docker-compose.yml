@@ -93,7 +93,7 @@ services:
     environment:
       - NODE_ENV=development
       - CI=true
-      - PLAYWRIGHT_BASE_URL=http://proxy:80
+      - PLAYWRIGHT_BASE_URL=http://proxy
     volumes:
       # Mount source code and test files
       - ./frontend/src:/app/src:rw
@@ -106,12 +106,20 @@ services:
       # Mount directory for test results and reports
       - ./frontend/playwright-report:/app/playwright-report:rw
       - ./frontend/test-results:/app/test-results:rw
-    command: ["npx", "playwright", "test", "--reporter=list,html"]
+    command: 
+      - /bin/sh
+      - -c
+      - |
+        echo "Waiting for application to be ready..."
+        sleep 5
+        npx playwright test --reporter=list,html
     depends_on:
       proxy:
         condition: service_started
       backend:
         condition: service_healthy
+      frontend:
+        condition: service_started
     profiles:
       - development
     networks:

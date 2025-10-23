@@ -151,6 +151,23 @@ Tests automatically take screenshots on failure. To manually take screenshots:
 await page.screenshot({ path: 'screenshots/my-test.png' });
 ```
 
+### Common Issues
+
+If tests are failing, check the [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) guide which covers:
+- Element not found errors
+- Timeout issues
+- Docker-specific problems
+- Service readiness
+- Network configuration
+
+### Docker-Specific Tips
+
+When running tests in Docker:
+1. Ensure all services are up: `docker-compose ps`
+2. Check logs: `docker-compose logs -f frontend backend proxy`
+3. Wait times may be longer due to network latency
+4. Screenshots and videos are saved to `frontend/test-results/`
+
 ## 📊 CI/CD Integration
 
 The tests are configured to run in CI environments:

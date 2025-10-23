@@ -29,7 +29,7 @@ export default defineConfig({
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:80',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost',
     
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -39,6 +39,9 @@ export default defineConfig({
     
     // Video on failure
     video: 'retain-on-failure',
+    
+    // Increase navigation timeout
+    navigationTimeout: 15000,
   },
 
   // Configure projects for major browsers

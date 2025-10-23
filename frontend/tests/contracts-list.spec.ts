@@ -11,11 +11,17 @@ test.describe('Contracts List Page', () => {
     contractsPage = new ContractsListPage(page);
   });
 
-  test('should load the page successfully', async () => {
+  test('should load the page successfully', async ({ page }) => {
     await contractsPage.navigate();
     
+    // Wait for React to render the root element
+    await page.waitForSelector('#root', { state: 'attached' });
+    
+    // Wait for the main container to be visible
+    await page.waitForSelector('[class*="MuiContainer"]', { timeout: 10000 });
+    
     // Verify main page elements are visible
-    await expect(contractsPage.pageTitle).toBeVisible();
+    await expect(contractsPage.pageTitle).toBeVisible({ timeout: 10000 });
     await expect(contractsPage.pageTitle).toHaveText('AI Contracts System');
     
     await expect(contractsPage.pageSubtitle).toBeVisible();

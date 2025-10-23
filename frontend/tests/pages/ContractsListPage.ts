@@ -36,6 +36,10 @@ export class ContractsListPage extends BasePage {
   async navigate() {
     await this.goto('/');
     await this.waitForPageLoad();
+    // Wait for React root element to be present
+    await this.page.waitForSelector('#root', { state: 'attached', timeout: 10000 });
+    // Wait for the main container to render
+    await this.page.waitForSelector('[class*="MuiContainer"]', { timeout: 10000 });
   }
 
   /**
