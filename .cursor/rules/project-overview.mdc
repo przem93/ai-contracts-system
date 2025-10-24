@@ -219,3 +219,218 @@ For example:
 4. **Validate circular dependencies** and alert users
 5. **Track impact** of changes across the dependency graph
 
+---
+
+## 🧪 Integration Testing
+
+The project uses **Playwright** for end-to-end integration testing of the frontend application. Tests are located in `frontend/tests/` and follow established best practices for maintainability and reusability.
+
+### Testing Architecture
+
+The integration tests follow the **Page Object Model (POM)** pattern with class-based abstractions for both pages and components:
+
+#### **Page Abstractions (Class-Based)**
+Page objects are implemented as **classes** that encapsulate page structure and provide methods to interact with specific pages:
+
+- **BasePage** (`tests/pages/BasePage.ts`): Base class providing common functionality for all page objects
+  - Navigation methods (`goto()`, `waitForPageLoad()`)
+  - Utility methods (`getTitle()`, `takeScreenshot()`)
+  - Shared functionality inherited by all page objects
+
+- **Specific Page Objects** (e.g., `ContractsListPage.ts`): Classes extending `BasePage` with page-specific methods
+  - Define page-specific locators as class properties
+  - Provide high-level interaction methods
+  - Encapsulate page structure and behavior
+  - Enable reusable, maintainable test code
+
+**Example structure**:
+```typescript
+export class ContractsListPage extends BasePage {
+  readonly pageTitle: Locator;
+  readonly contractCards: Locator;
+  
+  constructor(page: Page) {
+    super(page);
+    this.pageTitle = page.getByRole('heading', { name: 'AI Contracts System' });
+  }
+  
+  async navigate() { /* ... */ }
+  async getContractsCount(): Promise<number> { /* ... */ }
+}
+```
+
+#### **Component Abstractions (Class-Based)**
+Reusable UI components are also implemented as **classes** that wrap specific UI elements:
+
+- **Alert** (`tests/components/Alert.ts`): Class wrapping MUI Alert components
+- **ContractCard** (`tests/components/ContractCard.ts`): Class wrapping contract card elements
+- **LoadingSpinner** (`tests/components/LoadingSpinner.ts`): Class wrapping loading spinner with wait methods
+
+Each component class:
+- Takes a `Locator` in its constructor
+- Provides methods to interact with and verify the component
+- Encapsulates component-specific behavior
+- Can be reused across multiple tests
+
+**Example structure**:
+```typescript
+export class Alert {
+  readonly alert: Locator;
+  
+  constructor(alertLocator: Locator) {
+    this.alert = alertLocator;
+  }
+  
+  async verifyIsVisible() { /* ... */ }
+  async verifyText(expectedText: string) { /* ... */ }
+}
+```
+
+### Test Organization
+
+Tests are **separated into individual files by functionality** to maintain clarity and modularity:
+
+- **`contracts-list.spec.ts`**: Tests for contracts listing functionality
+  - Loading state tests
+  - Success state tests (displaying contracts)
+  - Error state tests
+  - Empty state tests
+  - Contract details verification
+
+- **Future test files**: Each major feature should have its own test file
+  - `contract-verification.spec.ts`: Tests for contract verification flow
+  - `contract-apply.spec.ts`: Tests for applying contract changes
+  - etc.
+
+This separation ensures:
+- **Clear test organization**: Easy to locate tests for specific features
+- **Parallel execution**: Tests can run independently
+- **Maintainability**: Changes to one feature don't affect unrelated tests
+- **Scalability**: New features can add new test files without cluttering existing ones
+
+### Best Practices Applied
+
+1. **Class-based abstractions for pages and components**
+   - All page objects extend from `BasePage` class
+   - All component wrappers are implemented as classes
+   - Classes encapsulate locators and interaction methods
+   - Promotes code reuse and maintainability
+
+2. **One test file per feature/functionality**
+   - Contracts listing has its own file (`contracts-list.spec.ts`)
+   - Verification would have its own file (`contract-verification.spec.ts`)
+   - Each file focuses on testing a single feature or workflow
+   - Keeps test suites focused and maintainable
+
+3. **API mocking for predictable tests**
+   - Use Playwright's route interception to mock API responses
+   - Tests are independent of backend state
+   - Faster test execution
+   - Predictable test results
+
+4. **AAA (Arrange-Act-Assert) pattern**
+   - **Arrange**: Set up test data and mock API responses
+   - **Act**: Navigate to page and perform user actions
+   - **Assert**: Verify expected outcomes
+
+5. **Descriptive test names**
+   - Test names clearly describe the scenario being tested
+   - Use `should...` pattern for clarity
+   - Examples: `should display contracts when API returns data`
+
+### Running Integration Tests
+
+```bash
+# Run all tests
+npm run test:e2e
+
+# Run in UI mode (interactive)
+npm run test:e2e:ui
+
+# Run in headed mode (visible browser)
+npm run test:e2e:headed
+
+# Debug tests
+npm run test:e2e:debug
+
+# Run in Docker (CI/CD)
+docker-compose --profile development run --rm frontend-test
+```
+
+### Writing New Integration Tests
+
+When adding new integration tests, follow these guidelines:
+
+1. **Create or extend page objects** for new pages (class-based)
+2. **Extract reusable components** as component classes
+3. **Write tests in separate files** for each distinct feature/functionality
+4. **Use descriptive test names** that explain the scenario
+5. **Mock API responses** using Playwright's route interception
+6. **Follow AAA pattern**: Arrange, Act, Assert
+7. **Use the existing class-based patterns** for consistency
+
+### Element Locator Strategy
+
+When selecting elements in Playwright tests, use the **recommended priority order** based on accessibility and maintainability:
+
+1. **`getByRole`** - Preferred method for most elements (buttons, headings, links, etc.)
+   ```typescript
+   page.getByRole('button', { name: 'Submit' })
+   page.getByRole('heading', { name: 'AI Contracts System', level: 1 })
+   ```
+
+2. **`getByLabel`** - For form elements with labels
+   ```typescript
+   page.getByLabel('Email address')
+   ```
+
+3. **`getByPlaceholder`** - For inputs with placeholder text
+   ```typescript
+   page.getByPlaceholder('Enter your email')
+   ```
+
+4. **`getByText`** - For elements with specific text content
+   ```typescript
+   page.getByText('No contracts found')
+   ```
+
+5. **`getByTestId`** - **Use as last resort** when none of the above methods work
+   ```typescript
+   page.getByTestId('contract-card')
+   ```
+
+**Why this order matters**:
+- Methods 1-4 align with how users interact with the page (accessibility-first)
+- Tests using these methods are more resilient to implementation changes
+- `getByTestId` requires adding `data-testid` attributes, which couples tests to implementation
+- Only use `getByTestId` when the element cannot be uniquely identified by role, label, placeholder, or text
+
+**Examples from our codebase**:
+```typescript
+// ✅ Good - using getByRole
+this.pageTitle = page.getByRole('heading', { name: 'AI Contracts System', level: 1 });
+
+// ✅ Good - using getByTestId as last resort (when element has no accessible role/label/text)
+this.contractCards = page.getByTestId('contract-card');
+
+// ❌ Avoid - using CSS selectors when better options exist
+this.pageTitle = page.locator('.MuiTypography-h1'); // harder to maintain
+```
+
+### Test File Structure
+
+```
+frontend/tests/
+├── pages/                  # Page object classes
+│   ├── BasePage.ts        # Base class with common functionality
+│   └── ContractsListPage.ts   # Contracts list page object class
+├── components/             # Component abstraction classes
+│   ├── Alert.ts           # Alert component class
+│   ├── ContractCard.ts    # Contract card component class
+│   └── LoadingSpinner.ts  # Loading spinner component class
+├── fixtures/              # Test data and mock responses
+│   └── contracts-data.ts
+├── contracts-list.spec.ts # Tests for contracts listing
+└── README.md             # Testing documentation
+```
+
