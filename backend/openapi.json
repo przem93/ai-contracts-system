@@ -55,7 +55,14 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Returns validation results for all contract files"
+            "description": "Returns validation results for all contract files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -96,6 +103,78 @@
           "fileName",
           "filePath",
           "content"
+        ]
+      },
+      "ValidationErrorDto": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The path to the field with the validation error",
+            "example": "dependencies.0.module_id"
+          },
+          "message": {
+            "type": "string",
+            "description": "The validation error message",
+            "example": "Referenced module \"users-permissions\" does not exist"
+          }
+        },
+        "required": [
+          "path",
+          "message"
+        ]
+      },
+      "ValidationFileDto": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "description": "The full path to the contract file",
+            "example": "/contracts/example-contract.yml"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The name of the contract file",
+            "example": "example-contract.yml"
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the contract file is valid",
+            "example": true
+          },
+          "errors": {
+            "description": "List of validation errors (only present if valid is false)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationErrorDto"
+            }
+          }
+        },
+        "required": [
+          "filePath",
+          "fileName",
+          "valid"
+        ]
+      },
+      "ValidationResponseDto": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Whether all contracts are valid",
+            "example": true
+          },
+          "files": {
+            "description": "Validation results for each contract file",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ValidationFileDto"
+            }
+          }
+        },
+        "required": [
+          "valid",
+          "files"
         ]
       }
     }
