@@ -369,6 +369,54 @@ When adding new integration tests, follow these guidelines:
 6. **Follow AAA pattern**: Arrange, Act, Assert
 7. **Use the existing class-based patterns** for consistency
 
+### Element Locator Strategy
+
+When selecting elements in Playwright tests, use the **recommended priority order** based on accessibility and maintainability:
+
+1. **`getByRole`** - Preferred method for most elements (buttons, headings, links, etc.)
+   ```typescript
+   page.getByRole('button', { name: 'Submit' })
+   page.getByRole('heading', { name: 'AI Contracts System', level: 1 })
+   ```
+
+2. **`getByLabel`** - For form elements with labels
+   ```typescript
+   page.getByLabel('Email address')
+   ```
+
+3. **`getByPlaceholder`** - For inputs with placeholder text
+   ```typescript
+   page.getByPlaceholder('Enter your email')
+   ```
+
+4. **`getByText`** - For elements with specific text content
+   ```typescript
+   page.getByText('No contracts found')
+   ```
+
+5. **`getByTestId`** - **Use as last resort** when none of the above methods work
+   ```typescript
+   page.getByTestId('contract-card')
+   ```
+
+**Why this order matters**:
+- Methods 1-4 align with how users interact with the page (accessibility-first)
+- Tests using these methods are more resilient to implementation changes
+- `getByTestId` requires adding `data-testid` attributes, which couples tests to implementation
+- Only use `getByTestId` when the element cannot be uniquely identified by role, label, placeholder, or text
+
+**Examples from our codebase**:
+```typescript
+// ✅ Good - using getByRole
+this.pageTitle = page.getByRole('heading', { name: 'AI Contracts System', level: 1 });
+
+// ✅ Good - using getByTestId as last resort (when element has no accessible role/label/text)
+this.contractCards = page.getByTestId('contract-card');
+
+// ❌ Avoid - using CSS selectors when better options exist
+this.pageTitle = page.locator('.MuiTypography-h1'); // harder to maintain
+```
+
 ### Test File Structure
 
 ```
