@@ -7,7 +7,8 @@ import {
   Stack,
   CircularProgress,
   Alert,
-  Chip
+  Chip,
+  Button
 } from '@mui/material'
 import { useContractsControllerGetAllContracts } from './api/generated/contracts/contracts'
 
@@ -92,6 +93,16 @@ function App() {
                   ))}
                 </Stack>
               )}
+              
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                <Button 
+                  variant="contained" 
+                  color="primary"
+                  size="large"
+                >
+                  Go to Step 2: Verification
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Stack>

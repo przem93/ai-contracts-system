@@ -186,4 +186,18 @@ test.describe('Contracts List Page', () => {
     expect(serviceContract).toBe(true);
     expect(frontendContract).toBe(true);
   });
+
+  test('should display "Go to Step 2: Verification" button', async ({ page }) => {
+    // Mock API response with sample contracts
+    await page.route('**/api/contracts', async (route) => {
+      await route.fulfill(mockApiResponses.success(mockContracts.validContracts));
+    });
+
+    await contractsPage.navigate();
+    await contractsPage.waitForContractsToLoad();
+
+    // Verify the "Go to Step 2" button is visible
+    await expect(contractsPage.goToStep2Button).toBeVisible();
+    await expect(contractsPage.goToStep2Button).toHaveText('Go to Step 2: Verification');
+  });
 });
