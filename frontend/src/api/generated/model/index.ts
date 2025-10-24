@@ -8,3 +8,6 @@
 
 export * from './contractFileDto';
 export * from './contractFileDtoContent';
+export * from './validationErrorDto';
+export * from './validationFileDto';
+export * from './validationResponseDto';

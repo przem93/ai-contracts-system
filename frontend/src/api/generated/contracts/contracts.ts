@@ -21,7 +21,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ContractFileDto
+  ContractFileDto,
+  ValidationResponseDto
 } from '.././model';
 
 import { customAxiosInstance } from '../../axios-instance';
@@ -129,7 +130,7 @@ export const contractsControllerValidateContracts = (
 ) => {
       
       
-      return customAxiosInstance<void>(
+      return customAxiosInstance<ValidationResponseDto>(
       {url: `http://localhost/api/contracts/validate`, method: 'GET', signal
     },
       );
