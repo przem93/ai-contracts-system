@@ -6,8 +6,10 @@
 echo "🚀 Starting frontend application..."
 echo "📌 NODE_ENV: ${NODE_ENV}"
 
+npm install
+
 # Generate API client from backend OpenAPI spec
-if [ -f "/app/backend-openapi.json" ]; then
+if [ -f "/usr/src/app/backend-openapi.json" ]; then
     echo "📡 Generating API client from OpenAPI spec..."
     npm run generate:api
     if [ $? -eq 0 ]; then
@@ -17,7 +19,7 @@ if [ -f "/app/backend-openapi.json" ]; then
         exit 1
     fi
 else
-    echo "❌ OpenAPI spec not found at /app/backend-openapi.json"
+    echo "❌ OpenAPI spec not found at /usr/src/app/backend-openapi.json"
     echo "❌ Cannot start frontend without API client"
     exit 1
 fi

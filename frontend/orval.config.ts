@@ -3,7 +3,7 @@ import { defineConfig } from "orval";
 export default defineConfig({
   "ai-contracts-api": {
     input: {
-      target: "../backend/openapi.json",
+      target: "/usr/src/app/backend-openapi.json",
     },
     output: {
       mode: "tags-split",

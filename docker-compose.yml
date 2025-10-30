@@ -24,8 +24,7 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
     volumes:
       - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules
-      - ./backend/openapi.json:/app/backend-openapi.json:ro
+      - ./backend/openapi.json:/usr/src/app/backend-openapi.json:ro
     restart: unless-stopped
     depends_on:
       backend:
