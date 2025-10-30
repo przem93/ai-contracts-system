@@ -141,11 +141,11 @@ function ValidationPage() {
                                     secondary={`Path: ${error.path}`}
                                     primaryTypographyProps={{
                                       variant: 'body2',
-                                      color: 'error.dark'
+                                      color: 'white'
                                     }}
                                     secondaryTypographyProps={{
                                       variant: 'caption',
-                                      color: 'error.dark'
+                                      color: 'white'
                                     }}
                                   />
                                 </ListItem>
