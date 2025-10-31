@@ -12,13 +12,17 @@ RUN apt-get update && apt-get install -y tini && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for testing)
-RUN npm ci
+RUN npm install
 
 # Copy necessary configuration files
 COPY . .
 
-# Install Playwright browsers (already included in base image, but ensure they're up to date)
-RUN npx playwright install --with-deps chromium
+# Install Playwright browser only if it's missing from the base image
+RUN if ls /ms-playwright | grep -q "chromium"; then \
+      echo "Chromium already present in base image"; \
+    else \
+      echo "Chromium not found, installing..." && npx playwright install --with-deps chromium; \
+    fi
 
 # Use tini to handle signals properly
 ENTRYPOINT ["/usr/bin/tini", "--"]
