@@ -27,7 +27,7 @@ export class ValidationPage extends BasePage {
     super(page);
     
     // Initialize locators
-    this.pageTitle = page.getByRole('heading', { name: 'Contract Validation', level: 4 });
+    this.pageTitle = page.getByRole('heading', { name: 'Contract Validation', level: 1 });
     this.pageSubtitle = page.getByText('Review validation results for all contract files');
     this.loadingSpinner = page.getByRole('progressbar');
     this.errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error loading validation results' });
@@ -38,10 +38,10 @@ export class ValidationPage extends BasePage {
     this.successIcon = page.locator('[data-testid="CheckCircleIcon"]').first();
     this.errorIcon = page.locator('[data-testid="ErrorIcon"]').first();
     this.overallStatusTitle = page.getByRole('heading', { level: 6 }).first();
-    this.overallStatusDescription = this.overallStatusCard.locator('p').filter({ hasText: /contract.*validation/ });
+    this.overallStatusDescription = this.overallStatusCard.locator('p').first();
     
     // Individual contract cards
-    this.contractCards = page.locator('.MuiCard-root[class*="MuiCard-outlined"]');
+    this.contractCards = page.getByTestId('contract-card');
   }
 
   /**
@@ -163,8 +163,8 @@ export class ValidationPage extends BasePage {
     const contractCard = this.contractCards.nth(index);
     await expect(contractCard).toBeVisible();
 
-    const fileName = await contractCard.locator('h6').textContent() || '';
-    const filePath = await contractCard.locator('text=/Path:/').textContent() || '';
+    const fileName = await contractCard.locator('h6').nth(0).textContent() || '';
+    const filePath = await contractCard.locator('text=/Path:/').nth(0).textContent() || '';
     
     // Check if valid by looking for the chip
     const statusChip = await contractCard.locator('[class*="MuiChip-root"]').textContent() || '';

@@ -1,4 +1,4 @@
-id: users-get
+
 type: controller
 description: Users get endpoint
 category: api

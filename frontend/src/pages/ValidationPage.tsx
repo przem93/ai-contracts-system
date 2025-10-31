@@ -95,6 +95,7 @@ function ValidationPage() {
                       borderColor: file.valid ? 'success.main' : 'error.main',
                       borderWidth: 2
                     }}
+                    data-testid="contract-card"
                   >
                     <CardContent>
                       <Stack spacing={2}>
