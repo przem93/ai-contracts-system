@@ -6,12 +6,16 @@ import * as yaml from "js-yaml";
 import { glob } from "glob";
 import { ContractSchema, Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
+import { Neo4jService } from "../neo4j/neo4j.service";
 
 @Injectable()
 export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(
+    private configService: ConfigService,
+    private neo4jService: Neo4jService,
+  ) {}
 
   async getAllContracts(): Promise<ContractFileDto[]> {
     const contractsPath = this.configService.get<string>("CONTRACTS_PATH");
@@ -245,6 +249,138 @@ export class ContractsService {
     } catch (error) {
       this.logger.error("Error validating contracts:", error.message);
       throw new Error(`Failed to validate contracts: ${error.message}`);
+    }
+  }
+
+  /**
+   * Apply contracts data to Neo4j database
+   * Creates Module nodes, Part nodes, and their relationships
+   * @param contracts Array of contracts to apply
+   * @returns Object with success status and number of modules processed
+   */
+  async applyContractsToNeo4j(contracts: Contract[]): Promise<{
+    success: boolean;
+    modulesProcessed: number;
+    partsProcessed: number;
+    message: string;
+  }> {
+    const session = this.neo4jService.getSession();
+
+    try {
+      this.logger.log(
+        `Starting to apply ${contracts.length} contracts to Neo4j`,
+      );
+
+      let totalModulesProcessed = 0;
+      let totalPartsProcessed = 0;
+
+      // Process each contract
+      for (const contract of contracts) {
+        // Create or merge Module node
+        await session.run(
+          `
+          MERGE (m:Module {module_id: $module_id})
+          SET m.type = $type,
+              m.description = $description,
+              m.category = $category
+          RETURN m
+          `,
+          {
+            module_id: contract.id,
+            type: contract.type,
+            description: contract.description,
+            category: contract.category,
+          },
+        );
+
+        totalModulesProcessed++;
+        this.logger.log(`Created/updated module: ${contract.id}`);
+
+        // Process parts if they exist
+        if (contract.parts && contract.parts.length > 0) {
+          for (const part of contract.parts) {
+            // Create or merge Part node
+            await session.run(
+              `
+              MERGE (p:Part {part_id: $part_id, module_id: $module_id})
+              SET p.type = $type
+              RETURN p
+              `,
+              {
+                part_id: part.id,
+                module_id: contract.id,
+                type: part.type,
+              },
+            );
+
+            // Create MODULE_PART relationship
+            await session.run(
+              `
+              MATCH (m:Module {module_id: $module_id})
+              MATCH (p:Part {part_id: $part_id, module_id: $module_id})
+              MERGE (m)-[r:MODULE_PART]->(p)
+              RETURN r
+              `,
+              {
+                module_id: contract.id,
+                part_id: part.id,
+              },
+            );
+
+            totalPartsProcessed++;
+          }
+
+          this.logger.log(
+            `Created/updated ${contract.parts.length} parts for module: ${contract.id}`,
+          );
+        }
+
+        // Process dependencies if they exist
+        if (contract.dependencies && contract.dependencies.length > 0) {
+          for (const dependency of contract.dependencies) {
+            // Create MODULE_DEPENDENCY relationship with properties
+            await session.run(
+              `
+              MATCH (m:Module {module_id: $from_module_id})
+              MATCH (d:Module {module_id: $to_module_id})
+              MERGE (m)-[r:MODULE_DEPENDENCY {module_id: $to_module_id}]->(d)
+              SET r.parts = $parts
+              RETURN r
+              `,
+              {
+                from_module_id: contract.id,
+                to_module_id: dependency.module_id,
+                parts: JSON.stringify(dependency.parts),
+              },
+            );
+          }
+
+          this.logger.log(
+            `Created/updated ${contract.dependencies.length} dependencies for module: ${contract.id}`,
+          );
+        }
+      }
+
+      this.logger.log(
+        `Successfully applied ${totalModulesProcessed} modules and ${totalPartsProcessed} parts to Neo4j`,
+      );
+
+      return {
+        success: true,
+        modulesProcessed: totalModulesProcessed,
+        partsProcessed: totalPartsProcessed,
+        message: `Successfully applied ${totalModulesProcessed} modules and ${totalPartsProcessed} parts to Neo4j`,
+      };
+    } catch (error) {
+      this.logger.error("Error applying contracts to Neo4j:", error.message);
+      return {
+        success: false,
+        modulesProcessed: 0,
+        partsProcessed: 0,
+        message: `Failed to apply contracts to Neo4j: ${error.message}`,
+      };
+    } finally {
+      await session.close();
     }
   }
 }
