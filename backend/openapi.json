@@ -69,6 +69,35 @@
           "contracts"
         ]
       }
+    },
+    "/api/contracts/apply": {
+      "post": {
+        "operationId": "ContractsController_applyContracts",
+        "summary": "Apply contract changes to Neo4j database",
+        "description": "Validates all contracts first, then applies them to the Neo4j database if validation passes. Clears existing data before applying.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Contracts successfully applied to database",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Contract validation failed - invalid contracts detected"
+          },
+          "500": {
+            "description": "Failed to apply contracts to database"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
     }
   },
   "info": {
@@ -175,6 +204,37 @@
         "required": [
           "valid",
           "files"
+        ]
+      },
+      "ApplyResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the operation was successful",
+            "example": true
+          },
+          "modulesProcessed": {
+            "type": "number",
+            "description": "Number of modules processed",
+            "example": 5
+          },
+          "partsProcessed": {
+            "type": "number",
+            "description": "Number of parts processed",
+            "example": 12
+          },
+          "message": {
+            "type": "string",
+            "description": "Success or error message",
+            "example": "Successfully applied 5 modules and 12 parts to Neo4j"
+          }
+        },
+        "required": [
+          "success",
+          "modulesProcessed",
+          "partsProcessed",
+          "message"
         ]
       }
     }
