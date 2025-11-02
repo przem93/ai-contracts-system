@@ -10,14 +10,17 @@ import {
   Chip,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  Button
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { useContractsControllerValidateContracts } from '../api/generated/contracts/contracts';
 import { ValidationResponseDto } from '../api/generated/model';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 
 function ValidationPage() {
+  const navigate = useNavigate();
   // Use the generated React Query hook to fetch validation results
   const { data, isLoading, error } = useContractsControllerValidateContracts<ValidationResponseDto>();
 
@@ -170,6 +173,20 @@ function ValidationPage() {
                 <Alert severity="info">
                   No contract files found to validate
                 </Alert>
+              )}
+
+              {/* Apply Changes button - only show when validation is successful */}
+              {data.valid && data.files.length > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    onClick={() => navigate('/apply')}
+                  >
+                    Apply Changes
+                  </Button>
+                </Box>
               )}
             </>
           )}

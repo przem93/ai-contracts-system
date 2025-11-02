@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import ContractsListPage from './pages/ContractsListPage';
 import ValidationPage from './pages/ValidationPage';
+import ApplyChangesPage from './pages/ApplyChangesPage';
 
 function App() {
   return (
@@ -18,12 +19,16 @@ function App() {
             <Button color="inherit" component={Link} to="/validation">
               Validation
             </Button>
+            <Button color="inherit" component={Link} to="/apply">
+              Apply
+            </Button>
           </Toolbar>
         </AppBar>
 
         <Routes>
           <Route path="/" element={<ContractsListPage />} />
           <Route path="/validation" element={<ValidationPage />} />
+          <Route path="/apply" element={<ApplyChangesPage />} />
         </Routes>
       </Box>
     </Router>

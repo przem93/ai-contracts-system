@@ -6,21 +6,26 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  ApplyResponseDto,
   ContractFileDto,
   ValidationResponseDto
 } from '.././model';
@@ -212,3 +217,67 @@ export function useContractsControllerValidateContracts<TData = Awaited<ReturnTy
 
 
 
+/**
+ * Validates all contracts first, then applies them to the Neo4j database if validation passes. Clears existing data before applying.
+ * @summary Apply contract changes to Neo4j database
+ */
+export const contractsControllerApplyContracts = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<ApplyResponseDto>(
+      {url: `http://localhost/api/contracts/apply`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getContractsControllerApplyContractsMutationOptions = <TError = void | void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof contractsControllerApplyContracts>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof contractsControllerApplyContracts>>, TError,void, TContext> => {
+
+const mutationKey = ['contractsControllerApplyContracts'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof contractsControllerApplyContracts>>, void> = () => {
+          
+
+          return  contractsControllerApplyContracts()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ContractsControllerApplyContractsMutationResult = NonNullable<Awaited<ReturnType<typeof contractsControllerApplyContracts>>>
+    
+    export type ContractsControllerApplyContractsMutationError = void | void
+
+    /**
+ * @summary Apply contract changes to Neo4j database
+ */
+export const useContractsControllerApplyContracts = <TError = void | void,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof contractsControllerApplyContracts>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof contractsControllerApplyContracts>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getContractsControllerApplyContractsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
