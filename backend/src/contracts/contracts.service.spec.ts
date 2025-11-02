@@ -1,13 +1,23 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { ContractsService } from "./contracts.service";
+import { Neo4jService } from "../neo4j/neo4j.service";
+import { Contract } from "./contract.schema";
 import * as path from "path";
 
 describe("ContractsService", () => {
   let service: ContractsService;
   let configService: ConfigService;
+  let neo4jService: Neo4jService;
+  let mockSession: any;
 
   beforeEach(async () => {
+    // Create mock session
+    mockSession = {
+      run: jest.fn().mockResolvedValue({ records: [] }),
+      close: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ContractsService,
@@ -15,6 +25,13 @@ describe("ContractsService", () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn(),
+          },
+        },
+        {
+          provide: Neo4jService,
+          useValue: {
+            getSession: jest.fn().mockReturnValue(mockSession),
+            getDriver: jest.fn(),
           },
         },
       ],
@@ -30,6 +47,7 @@ describe("ContractsService", () => {
 
     service = module.get<ContractsService>(ContractsService);
     configService = module.get<ConfigService>(ConfigService);
+    neo4jService = module.get<Neo4jService>(Neo4jService);
   });
 
   it("should be defined", () => {
@@ -386,6 +404,382 @@ describe("ContractsService", () => {
       await expect(service.getAllContracts()).rejects.toThrow(
         "CONTRACTS_PATH environment variable is not set",
       );
+    });
+  });
+
+  describe("applyContractsToNeo4j", () => {
+    beforeEach(() => {
+      // Reset mock session before each test
+      mockSession.run.mockClear();
+      mockSession.close.mockClear();
+      jest.spyOn(neo4jService, "getSession").mockReturnValue(mockSession);
+    });
+
+    it("should clear all existing data before applying contracts (reset behavior)", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "test-module",
+          type: "service",
+          category: "backend",
+          description: "Test module",
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contracts);
+
+      // Verify database clearing is the FIRST operation
+      expect(mockSession.run.mock.calls[0][0]).toBe(
+        "MATCH (n) DETACH DELETE n",
+      );
+
+      // Verify module creation happens AFTER clearing
+      expect(mockSession.run.mock.calls[1][0]).toContain(
+        "MERGE (m:Module {module_id: $module_id})",
+      );
+    });
+
+    it("should successfully apply a contract with module, parts, and dependencies", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "users-get",
+          type: "controller",
+          category: "api",
+          description: "Users get endpoint",
+          parts: [
+            { id: "getUserById", type: "function" },
+            { id: "getAllUsers", type: "function" },
+          ],
+          dependencies: [
+            {
+              module_id: "users-service",
+              parts: [
+                { part_id: "findUser", type: "function" },
+                { part_id: "listUsers", type: "function" },
+              ],
+            },
+          ],
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(1);
+      expect(result.partsProcessed).toBe(2);
+      expect(result.message).toContain("Successfully applied");
+
+      // Verify database was cleared first
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
+
+      // Verify module creation was called
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({
+          module_id: "users-get",
+          type: "controller",
+          category: "api",
+          description: "Users get endpoint",
+        }),
+      );
+
+      // Verify parts creation was called
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (p:Part {part_id: $part_id"),
+        expect.objectContaining({
+          part_id: "getUserById",
+          module_id: "users-get",
+          type: "function",
+        }),
+      );
+
+      // Verify MODULE_PART relationship was called
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m)-[r:MODULE_PART]->(p)"),
+        expect.objectContaining({
+          module_id: "users-get",
+          part_id: "getUserById",
+        }),
+      );
+
+      // Verify MODULE_DEPENDENCY relationship was called
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m)-[r:MODULE_DEPENDENCY"),
+        expect.objectContaining({
+          from_module_id: "users-get",
+          to_module_id: "users-service",
+          parts: expect.any(String),
+        }),
+      );
+
+      // Verify session was closed
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should successfully apply a contract without parts", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "simple-module",
+          type: "service",
+          category: "backend",
+          description: "Simple service module",
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(1);
+      expect(result.partsProcessed).toBe(0);
+
+      // Verify database was cleared first
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
+
+      // Verify module creation was called
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({
+          module_id: "simple-module",
+        }),
+      );
+
+      // Verify session was closed
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should successfully apply a contract without dependencies", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "standalone-module",
+          type: "service",
+          category: "backend",
+          description: "Standalone module with no dependencies",
+          parts: [{ id: "part1", type: "function" }],
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(1);
+      expect(result.partsProcessed).toBe(1);
+
+      // Verify MODULE_DEPENDENCY was not called (no dependencies)
+      const dependencyCalls = mockSession.run.mock.calls.filter((call) =>
+        call[0].includes("MODULE_DEPENDENCY"),
+      );
+      expect(dependencyCalls.length).toBe(0);
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should successfully apply multiple contracts", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "module-1",
+          type: "controller",
+          category: "api",
+          description: "First module",
+          parts: [{ id: "part1", type: "function" }],
+        },
+        {
+          id: "module-2",
+          type: "service",
+          category: "backend",
+          description: "Second module",
+          parts: [
+            { id: "part1", type: "class" },
+            { id: "part2", type: "interface" },
+          ],
+        },
+        {
+          id: "module-3",
+          type: "component",
+          category: "frontend",
+          description: "Third module",
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(3);
+      expect(result.partsProcessed).toBe(3);
+
+      // Verify all modules were created
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({ module_id: "module-1" }),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({ module_id: "module-2" }),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({ module_id: "module-3" }),
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle empty contracts array", async () => {
+      const contracts: Contract[] = [];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(0);
+      expect(result.partsProcessed).toBe(0);
+
+      // Verify database was cleared even with empty array
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
+
+      // Verify session was still closed
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j errors and return failure", async () => {
+      mockSession.run.mockRejectedValueOnce(
+        new Error("Neo4j connection failed"),
+      );
+
+      const contracts: Contract[] = [
+        {
+          id: "test-module",
+          type: "service",
+          category: "backend",
+          description: "Test module",
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(false);
+      expect(result.modulesProcessed).toBe(0);
+      expect(result.partsProcessed).toBe(0);
+      expect(result.message).toContain("Failed to apply contracts to Neo4j");
+      expect(result.message).toContain("Neo4j connection failed");
+
+      // Verify the clearing operation was attempted
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
+
+      // Verify session was still closed even on error
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should store dependency parts as JSON string", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "test-module",
+          type: "controller",
+          category: "api",
+          description: "Test module with dependencies",
+          dependencies: [
+            {
+              module_id: "dependency-module",
+              parts: [
+                { part_id: "function1", type: "function" },
+                { part_id: "class1", type: "class" },
+              ],
+            },
+          ],
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contracts);
+
+      // Find the dependency relationship call
+      const dependencyCall = mockSession.run.mock.calls.find((call) =>
+        call[0].includes("MODULE_DEPENDENCY"),
+      );
+
+      expect(dependencyCall).toBeDefined();
+      expect(dependencyCall[1].parts).toBe(
+        JSON.stringify([
+          { part_id: "function1", type: "function" },
+          { part_id: "class1", type: "class" },
+        ]),
+      );
+    });
+
+    it("should close session even if an error occurs during processing", async () => {
+      mockSession.run.mockRejectedValueOnce(new Error("Database error"));
+
+      const contracts: Contract[] = [
+        {
+          id: "test-module",
+          type: "service",
+          category: "backend",
+          description: "Test module",
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contracts);
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should process all parts for a module with multiple parts", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "multi-part-module",
+          type: "service",
+          category: "backend",
+          description: "Module with multiple parts",
+          parts: [
+            { id: "part1", type: "function" },
+            { id: "part2", type: "class" },
+            { id: "part3", type: "interface" },
+            { id: "part4", type: "type" },
+          ],
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+      expect(result.partsProcessed).toBe(4);
+
+      // Verify all parts were created
+      const partCreationCalls = mockSession.run.mock.calls.filter((call) =>
+        call[0].includes("MERGE (p:Part"),
+      );
+      expect(partCreationCalls.length).toBe(4);
+    });
+
+    it("should process all dependencies for a module with multiple dependencies", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "multi-dep-module",
+          type: "controller",
+          category: "api",
+          description: "Module with multiple dependencies",
+          dependencies: [
+            {
+              module_id: "dep1",
+              parts: [{ part_id: "func1", type: "function" }],
+            },
+            {
+              module_id: "dep2",
+              parts: [{ part_id: "func2", type: "function" }],
+            },
+            {
+              module_id: "dep3",
+              parts: [{ part_id: "func3", type: "function" }],
+            },
+          ],
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contracts);
+
+      expect(result.success).toBe(true);
+
+      // Verify all dependencies were created
+      const dependencyCalls = mockSession.run.mock.calls.filter((call) =>
+        call[0].includes("MODULE_DEPENDENCY"),
+      );
+      expect(dependencyCalls.length).toBe(3);
     });
   });
 });
