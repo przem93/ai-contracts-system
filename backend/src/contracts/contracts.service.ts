@@ -254,7 +254,7 @@ export class ContractsService {
 
   /**
    * Apply contracts data to Neo4j database
-   * Creates Module nodes, Part nodes, and their relationships
+   * Clears all existing data and creates Module nodes, Part nodes, and their relationships
    * @param contracts Array of contracts to apply
    * @returns Object with success status and number of modules processed
    */
@@ -267,6 +267,11 @@ export class ContractsService {
     const session = this.neo4jService.getSession();
 
     try {
+      // Clear all existing data from the database (reset)
+      this.logger.log("Clearing all existing data from Neo4j database...");
+      await session.run("MATCH (n) DETACH DELETE n");
+      this.logger.log("✓ Database cleared successfully");
+
       this.logger.log(
         `Starting to apply ${contracts.length} contracts to Neo4j`,
       );

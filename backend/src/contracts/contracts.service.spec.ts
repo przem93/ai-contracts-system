@@ -415,6 +415,29 @@ describe("ContractsService", () => {
       jest.spyOn(neo4jService, "getSession").mockReturnValue(mockSession);
     });
 
+    it("should clear all existing data before applying contracts (reset behavior)", async () => {
+      const contracts: Contract[] = [
+        {
+          id: "test-module",
+          type: "service",
+          category: "backend",
+          description: "Test module",
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contracts);
+
+      // Verify database clearing is the FIRST operation
+      expect(mockSession.run.mock.calls[0][0]).toBe(
+        "MATCH (n) DETACH DELETE n",
+      );
+
+      // Verify module creation happens AFTER clearing
+      expect(mockSession.run.mock.calls[1][0]).toContain(
+        "MERGE (m:Module {module_id: $module_id})",
+      );
+    });
+
     it("should successfully apply a contract with module, parts, and dependencies", async () => {
       const contracts: Contract[] = [
         {
@@ -444,6 +467,9 @@ describe("ContractsService", () => {
       expect(result.modulesProcessed).toBe(1);
       expect(result.partsProcessed).toBe(2);
       expect(result.message).toContain("Successfully applied");
+
+      // Verify database was cleared first
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
 
       // Verify module creation was called
       expect(mockSession.run).toHaveBeenCalledWith(
@@ -504,6 +530,9 @@ describe("ContractsService", () => {
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(1);
       expect(result.partsProcessed).toBe(0);
+
+      // Verify database was cleared first
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
 
       // Verify module creation was called
       expect(mockSession.run).toHaveBeenCalledWith(
@@ -602,6 +631,9 @@ describe("ContractsService", () => {
       expect(result.modulesProcessed).toBe(0);
       expect(result.partsProcessed).toBe(0);
 
+      // Verify database was cleared even with empty array
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
+
       // Verify session was still closed
       expect(mockSession.close).toHaveBeenCalled();
     });
@@ -627,6 +659,9 @@ describe("ContractsService", () => {
       expect(result.partsProcessed).toBe(0);
       expect(result.message).toContain("Failed to apply contracts to Neo4j");
       expect(result.message).toContain("Neo4j connection failed");
+
+      // Verify the clearing operation was attempted
+      expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
 
       // Verify session was still closed even on error
       expect(mockSession.close).toHaveBeenCalled();
