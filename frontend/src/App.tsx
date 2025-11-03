@@ -19,9 +19,6 @@ function App() {
             <Button color="inherit" component={Link} to="/validation">
               Validation
             </Button>
-            <Button color="inherit" component={Link} to="/apply">
-              Apply
-            </Button>
           </Toolbar>
         </AppBar>
 
