@@ -242,18 +242,32 @@ test.describe('Apply Changes Page', () => {
 
     // Mock apply API to fail first time, succeed second time
     await page.route('**/api/contracts/apply', async (route) => {
+      // Only handle POST requests
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      
       attemptCount++;
       if (attemptCount === 1) {
-        await route.fulfill(mockApplyApiResponses.databaseError);
+        // First attempt: simulate network/server error by aborting
+        await route.abort('failed');
       } else {
+        // Second attempt: return success
         await route.fulfill(mockApplyApiResponses.success);
       }
     });
 
     await applyChangesPage.navigate();
     
-    // Wait explicitly for error state by checking for Try Again button
-    await expect(applyChangesPage.tryAgainButton).toBeVisible({ timeout: 10000 });
+    // Wait for the page to load and request to complete
+    await page.waitForLoadState('networkidle');
+    
+    // Wait explicitly for error state by checking for error icon
+    await expect(applyChangesPage.errorIcon).toBeVisible({ timeout: 10000 });
+    
+    // Verify Try Again button is visible
+    await expect(applyChangesPage.tryAgainButton).toBeVisible();
 
     // Verify error state
     const hasFailed = await applyChangesPage.isApplyFailed();
