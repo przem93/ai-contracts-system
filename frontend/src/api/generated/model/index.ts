@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0
  */
 
+export * from './applyResponseDto';
 export * from './contractFileDto';
 export * from './contractFileDtoContent';
 export * from './validationErrorDto';
