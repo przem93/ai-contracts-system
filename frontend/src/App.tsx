@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import ContractsListPage from './pages/ContractsListPage';
 import ValidationPage from './pages/ValidationPage';
 import ApplyChangesPage from './pages/ApplyChangesPage';
@@ -10,15 +10,22 @@ function App() {
       <Box sx={{ flexGrow: 1 }}>
         <AppBar position="static">
           <Toolbar>
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            <Typography 
+              variant="h6" 
+              component={Link} 
+              to="/"
+              sx={{ 
+                flexGrow: 1,
+                textDecoration: 'none',
+                color: 'inherit',
+                '&:hover': {
+                  opacity: 0.8,
+                  cursor: 'pointer'
+                }
+              }}
+            >
               AI Contracts System
             </Typography>
-            <Button color="inherit" component={Link} to="/">
-              Contracts
-            </Button>
-            <Button color="inherit" component={Link} to="/validation">
-              Validation
-            </Button>
           </Toolbar>
         </AppBar>
 
