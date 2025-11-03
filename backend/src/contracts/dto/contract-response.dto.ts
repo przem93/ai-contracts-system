@@ -22,6 +22,12 @@ export class ContractFileDto {
     type: "object",
   })
   content: Contract;
+
+  @ApiProperty({
+    description: "SHA256 hash of the contract file content",
+    example: "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1",
+  })
+  fileHash: string;
 }
 
 /**

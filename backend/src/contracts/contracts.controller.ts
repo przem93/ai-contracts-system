@@ -71,11 +71,10 @@ export class ContractsController {
 
     // Step 3: Get all contracts
     const contractFiles = await this.contractsService.getAllContracts();
-    const contracts = contractFiles.map((file) => file.content);
 
-    // Step 4: Apply contracts to Neo4j
+    // Step 4: Apply contracts to Neo4j (with file hash)
     const applyResult =
-      await this.contractsService.applyContractsToNeo4j(contracts);
+      await this.contractsService.applyContractsToNeo4j(contractFiles);
 
     // Step 5: If apply failed, throw InternalServerErrorException
     if (!applyResult.success) {
