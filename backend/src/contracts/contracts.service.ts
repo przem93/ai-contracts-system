@@ -8,6 +8,10 @@ import { glob } from "glob";
 import { ContractSchema, Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { Neo4jService } from "../neo4j/neo4j.service";
+import {
+  CheckModifiedResponseDto,
+  ModifiedContractDto,
+} from "./dto/check-modified-response.dto";
 
 @Injectable()
 export class ContractsService {
@@ -396,6 +400,107 @@ export class ContractsService {
         partsProcessed: 0,
         message: `Failed to apply contracts to Neo4j: ${error.message}`,
       };
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Check if contract files have been modified by comparing their current hashes
+   * with the hashes stored in Neo4j database
+   * @returns Object with information about modified, added, and removed contracts
+   */
+  async checkIfContractsModified(): Promise<CheckModifiedResponseDto> {
+    const session = this.neo4jService.getSession();
+
+    try {
+      // Get all current contract files with their calculated hashes
+      const currentContracts = await this.getAllContracts();
+
+      // Query Neo4j to get all stored module hashes
+      const result = await session.run(
+        `
+        MATCH (m:Module)
+        RETURN m.module_id AS moduleId, m.contractFileHash AS storedHash
+        `,
+      );
+
+      // Build a map of stored hashes keyed by module_id
+      const storedHashes = new Map<string, string>();
+      result.records.forEach((record) => {
+        const moduleId = record.get("moduleId");
+        const storedHash = record.get("storedHash");
+        if (moduleId && storedHash) {
+          storedHashes.set(moduleId, storedHash);
+        }
+      });
+
+      const changes: ModifiedContractDto[] = [];
+
+      // Check for modified and added contracts
+      for (const contract of currentContracts) {
+        const moduleId = contract.content.id;
+        const currentHash = contract.fileHash;
+        const storedHash = storedHashes.get(moduleId);
+
+        if (!storedHash) {
+          // Contract is new (added)
+          changes.push({
+            moduleId,
+            fileName: contract.fileName,
+            filePath: contract.filePath,
+            currentHash,
+            storedHash: null,
+            status: "added",
+          });
+        } else if (storedHash !== currentHash) {
+          // Contract has been modified
+          changes.push({
+            moduleId,
+            fileName: contract.fileName,
+            filePath: contract.filePath,
+            currentHash,
+            storedHash,
+            status: "modified",
+          });
+        }
+
+        // Mark this module as seen
+        storedHashes.delete(moduleId);
+      }
+
+      // Any remaining modules in storedHashes are removed contracts
+      for (const [moduleId, storedHash] of storedHashes.entries()) {
+        changes.push({
+          moduleId,
+          fileName: "unknown",
+          filePath: "unknown",
+          currentHash: "",
+          storedHash,
+          status: "removed",
+        });
+      }
+
+      // Calculate statistics
+      const modifiedCount = changes.filter((c) => c.status === "modified").length;
+      const addedCount = changes.filter((c) => c.status === "added").length;
+      const removedCount = changes.filter((c) => c.status === "removed").length;
+
+      this.logger.log(
+        `Contract changes detected: ${modifiedCount} modified, ${addedCount} added, ${removedCount} removed`,
+      );
+
+      return {
+        hasChanges: changes.length > 0,
+        totalChanges: changes.length,
+        modifiedCount,
+        addedCount,
+        removedCount,
+        changes,
+      };
+    } catch (error) {
+      this.logger.error("Error checking contract modifications:", error.message);
+      throw new Error(`Failed to check contract modifications: ${error.message}`);
     } finally {
       await session.close();
     }

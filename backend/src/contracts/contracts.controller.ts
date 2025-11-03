@@ -10,6 +10,7 @@ import { ContractsService } from "./contracts.service";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { ValidationResponseDto } from "./dto/validation-response.dto";
 import { ApplyResponseDto } from "./dto/apply-response.dto";
+import { CheckModifiedResponseDto } from "./dto/check-modified-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -36,6 +37,26 @@ export class ContractsController {
   })
   async validateContracts(): Promise<ValidationResponseDto> {
     return this.contractsService.validateContracts();
+  }
+
+  @Get("check-if-contract-modified")
+  @ApiOperation({
+    summary: "Check if contract files have been modified",
+    description:
+      "Compares current contract file hashes with stored hashes in Neo4j database to detect modifications, additions, and removals",
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      "Returns information about modified, added, and removed contracts",
+    type: CheckModifiedResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: "Failed to check contract modifications",
+  })
+  async checkIfContractsModified(): Promise<CheckModifiedResponseDto> {
+    return this.contractsService.checkIfContractsModified();
   }
 
   @Post("apply")
