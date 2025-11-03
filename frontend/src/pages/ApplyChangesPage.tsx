@@ -168,6 +168,7 @@ function ApplyChangesPage() {
                         // Trigger the mutation again
                         mutate();
                       }}
+                      data-testid="try-again-button"
                     >
                       Try Again
                     </Button>

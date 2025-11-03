@@ -24,7 +24,7 @@ export class ApplyChangesPage extends BasePage {
     this.pageSubtitle = page.getByText('Applying validated contracts to the Neo4j database');
     this.loadingSpinner = page.locator('circle[class*="MuiCircularProgress"]').first();
     this.successIcon = page.locator('[data-testid="CheckCircleIcon"]');
-    this.errorIcon = page.locator('[data-testid="ErrorIcon"]');
+    this.errorIcon = page.getByTestId("ErrorIcon");
     this.successCard = page.locator('text=Changes Applied Successfully!').locator('..');
     this.errorCard = page.locator('text=Failed to Apply Changes').locator('..');
     this.successMessage = page.getByText('Changes Applied Successfully!');
@@ -33,7 +33,7 @@ export class ApplyChangesPage extends BasePage {
     this.partsProcessed = page.getByText(/Parts processed:/);
     this.returnToContractsButton = page.getByRole('button', { name: 'Return to Contracts List' });
     this.backToValidationButton = page.getByRole('button', { name: 'Back to Validation' });
-    this.tryAgainButton = page.getByRole('button', { name: 'Try Again' });
+    this.tryAgainButton = page.getByTestId('try-again-button');
     this.errorAlert = page.locator('[class*="MuiAlert-standardError"]');
   }
 
