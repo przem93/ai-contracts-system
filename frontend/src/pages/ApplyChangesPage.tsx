@@ -22,7 +22,7 @@ function ApplyChangesPage() {
   // Automatically trigger the apply operation when the page loads
   useEffect(() => {
     mutate();
-  }, [mutate]);
+  }, []);
 
   return (
     <Container maxWidth="lg">
@@ -77,16 +77,16 @@ function ApplyChangesPage() {
                     </Box>
                   </Stack>
 
-                  <Box sx={{ bgcolor: 'success.light', p: 2, borderRadius: 1 }}>
+                  <Box sx={{ bgcolor: 'success.light', p: 2, borderRadius: 1, color: 'white' }}>
                     <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                       Summary:
                     </Typography>
                     <Stack spacing={1}>
                       <Typography variant="body2">
-                        ? Modules processed: <strong>{data.modulesProcessed}</strong>
+                        Modules processed: <strong>{data.modulesProcessed}</strong>
                       </Typography>
                       <Typography variant="body2">
-                        ? Parts processed: <strong>{data.partsProcessed}</strong>
+                        Parts processed: <strong>{data.partsProcessed}</strong>
                       </Typography>
                     </Stack>
                   </Box>
