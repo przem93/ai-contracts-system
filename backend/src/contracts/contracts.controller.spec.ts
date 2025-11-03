@@ -265,6 +265,7 @@ describe("ContractsController", () => {
         {
           fileName: "contract1.yml",
           filePath: "/path/to/contract1.yml",
+          fileHash: "abc123",
           content: {
             id: "test",
             type: "service",
@@ -288,6 +289,7 @@ describe("ContractsController", () => {
       {
         fileName: "contract1.yml",
         filePath: "/path/to/contract1.yml",
+        fileHash: "hash123",
         content: {
           id: "users-get",
           type: "controller",
@@ -311,6 +313,7 @@ describe("ContractsController", () => {
       {
         fileName: "contract2.yml",
         filePath: "/path/to/contract2.yml",
+        fileHash: "hash456",
         content: {
           id: "users-service",
           type: "service",
@@ -368,10 +371,7 @@ describe("ContractsController", () => {
       // Verify the methods were called in the correct order
       expect(service.validateContracts).toHaveBeenCalled();
       expect(service.getAllContracts).toHaveBeenCalled();
-      expect(service.applyContractsToNeo4j).toHaveBeenCalledWith([
-        mockContracts[0].content,
-        mockContracts[1].content,
-      ]);
+      expect(service.applyContractsToNeo4j).toHaveBeenCalledWith(mockContracts);
     });
 
     it("should throw BadRequestException when validation fails", async () => {
@@ -579,19 +579,20 @@ describe("ContractsController", () => {
 
       await controller.applyContracts();
 
-      // Verify applyContractsToNeo4j was called with just the content (Contract objects)
-      expect(applyContractsSpy).toHaveBeenCalledWith([
-        mockContracts[0].content,
-        mockContracts[1].content,
-      ]);
+      // Verify applyContractsToNeo4j was called with full ContractFileDto objects (including hash)
+      expect(applyContractsSpy).toHaveBeenCalledWith(mockContracts);
 
       // Verify the contracts passed contain correct structure
       const calledWithContracts = applyContractsSpy.mock.calls[0][0];
       expect(calledWithContracts).toHaveLength(2);
-      expect(calledWithContracts[0]).toHaveProperty("id", "users-get");
-      expect(calledWithContracts[0]).toHaveProperty("type", "controller");
-      expect(calledWithContracts[1]).toHaveProperty("id", "users-service");
-      expect(calledWithContracts[1]).toHaveProperty("type", "service");
+      expect(calledWithContracts[0]).toHaveProperty("fileName");
+      expect(calledWithContracts[0]).toHaveProperty("filePath");
+      expect(calledWithContracts[0]).toHaveProperty("fileHash", "hash123");
+      expect(calledWithContracts[0].content).toHaveProperty("id", "users-get");
+      expect(calledWithContracts[0].content).toHaveProperty("type", "controller");
+      expect(calledWithContracts[1]).toHaveProperty("fileHash", "hash456");
+      expect(calledWithContracts[1].content).toHaveProperty("id", "users-service");
+      expect(calledWithContracts[1].content).toHaveProperty("type", "service");
     });
 
     it("should handle empty contracts list", async () => {

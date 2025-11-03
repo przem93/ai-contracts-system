@@ -3,7 +3,9 @@ import { ConfigService } from "@nestjs/config";
 import { ContractsService } from "./contracts.service";
 import { Neo4jService } from "../neo4j/neo4j.service";
 import { Contract } from "./contract.schema";
+import { ContractFileDto } from "./dto/contract-response.dto";
 import * as path from "path";
+import * as crypto from "crypto";
 
 describe("ContractsService", () => {
   let service: ContractsService;
@@ -416,16 +418,21 @@ describe("ContractsService", () => {
     });
 
     it("should clear all existing data before applying contracts (reset behavior)", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "test-module",
-          type: "service",
-          category: "backend",
-          description: "Test module",
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "abc123",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
         },
       ];
 
-      await service.applyContractsToNeo4j(contracts);
+      await service.applyContractsToNeo4j(contractFiles);
 
       // Verify database clearing is the FIRST operation
       expect(mockSession.run.mock.calls[0][0]).toBe(
@@ -439,29 +446,34 @@ describe("ContractsService", () => {
     });
 
     it("should successfully apply a contract with module, parts, and dependencies", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "users-get",
-          type: "controller",
-          category: "api",
-          description: "Users get endpoint",
-          parts: [
-            { id: "getUserById", type: "function" },
-            { id: "getAllUsers", type: "function" },
-          ],
-          dependencies: [
-            {
-              module_id: "users-service",
-              parts: [
-                { part_id: "findUser", type: "function" },
-                { part_id: "listUsers", type: "function" },
-              ],
-            },
-          ],
+          fileName: "users-get.yml",
+          filePath: "/test/users-get.yml",
+          fileHash: "def456",
+          content: {
+            id: "users-get",
+            type: "controller",
+            category: "api",
+            description: "Users get endpoint",
+            parts: [
+              { id: "getUserById", type: "function" },
+              { id: "getAllUsers", type: "function" },
+            ],
+            dependencies: [
+              {
+                module_id: "users-service",
+                parts: [
+                  { part_id: "findUser", type: "function" },
+                  { part_id: "listUsers", type: "function" },
+                ],
+              },
+            ],
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(1);
@@ -471,7 +483,7 @@ describe("ContractsService", () => {
       // Verify database was cleared first
       expect(mockSession.run).toHaveBeenCalledWith("MATCH (n) DETACH DELETE n");
 
-      // Verify module creation was called
+      // Verify module creation was called with hash
       expect(mockSession.run).toHaveBeenCalledWith(
         expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
         expect.objectContaining({
@@ -479,6 +491,7 @@ describe("ContractsService", () => {
           type: "controller",
           category: "api",
           description: "Users get endpoint",
+          contractFileHash: "def456",
         }),
       );
 
@@ -516,16 +529,21 @@ describe("ContractsService", () => {
     });
 
     it("should successfully apply a contract without parts", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "simple-module",
-          type: "service",
-          category: "backend",
-          description: "Simple service module",
+          fileName: "simple-module.yml",
+          filePath: "/test/simple-module.yml",
+          fileHash: "ghi789",
+          content: {
+            id: "simple-module",
+            type: "service",
+            category: "backend",
+            description: "Simple service module",
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(1);
@@ -547,17 +565,22 @@ describe("ContractsService", () => {
     });
 
     it("should successfully apply a contract without dependencies", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "standalone-module",
-          type: "service",
-          category: "backend",
-          description: "Standalone module with no dependencies",
-          parts: [{ id: "part1", type: "function" }],
+          fileName: "standalone-module.yml",
+          filePath: "/test/standalone-module.yml",
+          fileHash: "jkl012",
+          content: {
+            id: "standalone-module",
+            type: "service",
+            category: "backend",
+            description: "Standalone module with no dependencies",
+            parts: [{ id: "part1", type: "function" }],
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(1);
@@ -573,33 +596,48 @@ describe("ContractsService", () => {
     });
 
     it("should successfully apply multiple contracts", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "module-1",
-          type: "controller",
-          category: "api",
-          description: "First module",
-          parts: [{ id: "part1", type: "function" }],
+          fileName: "module-1.yml",
+          filePath: "/test/module-1.yml",
+          fileHash: "hash1",
+          content: {
+            id: "module-1",
+            type: "controller",
+            category: "api",
+            description: "First module",
+            parts: [{ id: "part1", type: "function" }],
+          },
         },
         {
-          id: "module-2",
-          type: "service",
-          category: "backend",
-          description: "Second module",
-          parts: [
-            { id: "part1", type: "class" },
-            { id: "part2", type: "interface" },
-          ],
+          fileName: "module-2.yml",
+          filePath: "/test/module-2.yml",
+          fileHash: "hash2",
+          content: {
+            id: "module-2",
+            type: "service",
+            category: "backend",
+            description: "Second module",
+            parts: [
+              { id: "part1", type: "class" },
+              { id: "part2", type: "interface" },
+            ],
+          },
         },
         {
-          id: "module-3",
-          type: "component",
-          category: "frontend",
-          description: "Third module",
+          fileName: "module-3.yml",
+          filePath: "/test/module-3.yml",
+          fileHash: "hash3",
+          content: {
+            id: "module-3",
+            type: "component",
+            category: "frontend",
+            description: "Third module",
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(3);
@@ -623,9 +661,9 @@ describe("ContractsService", () => {
     });
 
     it("should handle empty contracts array", async () => {
-      const contracts: Contract[] = [];
+      const contractFiles: ContractFileDto[] = [];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.modulesProcessed).toBe(0);
@@ -643,16 +681,21 @@ describe("ContractsService", () => {
         new Error("Neo4j connection failed"),
       );
 
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "test-module",
-          type: "service",
-          category: "backend",
-          description: "Test module",
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "errorHash",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(false);
       expect(result.modulesProcessed).toBe(0);
@@ -668,25 +711,30 @@ describe("ContractsService", () => {
     });
 
     it("should store dependency parts as JSON string", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "test-module",
-          type: "controller",
-          category: "api",
-          description: "Test module with dependencies",
-          dependencies: [
-            {
-              module_id: "dependency-module",
-              parts: [
-                { part_id: "function1", type: "function" },
-                { part_id: "class1", type: "class" },
-              ],
-            },
-          ],
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "depHash",
+          content: {
+            id: "test-module",
+            type: "controller",
+            category: "api",
+            description: "Test module with dependencies",
+            dependencies: [
+              {
+                module_id: "dependency-module",
+                parts: [
+                  { part_id: "function1", type: "function" },
+                  { part_id: "class1", type: "class" },
+                ],
+              },
+            ],
+          },
         },
       ];
 
-      await service.applyContractsToNeo4j(contracts);
+      await service.applyContractsToNeo4j(contractFiles);
 
       // Find the dependency relationship call
       const dependencyCall = mockSession.run.mock.calls.find((call) =>
@@ -705,37 +753,47 @@ describe("ContractsService", () => {
     it("should close session even if an error occurs during processing", async () => {
       mockSession.run.mockRejectedValueOnce(new Error("Database error"));
 
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "test-module",
-          type: "service",
-          category: "backend",
-          description: "Test module",
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "errorHash2",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
         },
       ];
 
-      await service.applyContractsToNeo4j(contracts);
+      await service.applyContractsToNeo4j(contractFiles);
 
       expect(mockSession.close).toHaveBeenCalled();
     });
 
     it("should process all parts for a module with multiple parts", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "multi-part-module",
-          type: "service",
-          category: "backend",
-          description: "Module with multiple parts",
-          parts: [
-            { id: "part1", type: "function" },
-            { id: "part2", type: "class" },
-            { id: "part3", type: "interface" },
-            { id: "part4", type: "type" },
-          ],
+          fileName: "multi-part-module.yml",
+          filePath: "/test/multi-part-module.yml",
+          fileHash: "multiPartHash",
+          content: {
+            id: "multi-part-module",
+            type: "service",
+            category: "backend",
+            description: "Module with multiple parts",
+            parts: [
+              { id: "part1", type: "function" },
+              { id: "part2", type: "class" },
+              { id: "part3", type: "interface" },
+              { id: "part4", type: "type" },
+            ],
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
       expect(result.partsProcessed).toBe(4);
@@ -748,30 +806,35 @@ describe("ContractsService", () => {
     });
 
     it("should process all dependencies for a module with multiple dependencies", async () => {
-      const contracts: Contract[] = [
+      const contractFiles: ContractFileDto[] = [
         {
-          id: "multi-dep-module",
-          type: "controller",
-          category: "api",
-          description: "Module with multiple dependencies",
-          dependencies: [
-            {
-              module_id: "dep1",
-              parts: [{ part_id: "func1", type: "function" }],
-            },
-            {
-              module_id: "dep2",
-              parts: [{ part_id: "func2", type: "function" }],
-            },
-            {
-              module_id: "dep3",
-              parts: [{ part_id: "func3", type: "function" }],
-            },
-          ],
+          fileName: "multi-dep-module.yml",
+          filePath: "/test/multi-dep-module.yml",
+          fileHash: "multiDepHash",
+          content: {
+            id: "multi-dep-module",
+            type: "controller",
+            category: "api",
+            description: "Module with multiple dependencies",
+            dependencies: [
+              {
+                module_id: "dep1",
+                parts: [{ part_id: "func1", type: "function" }],
+              },
+              {
+                module_id: "dep2",
+                parts: [{ part_id: "func2", type: "function" }],
+              },
+              {
+                module_id: "dep3",
+                parts: [{ part_id: "func3", type: "function" }],
+              },
+            ],
+          },
         },
       ];
 
-      const result = await service.applyContractsToNeo4j(contracts);
+      const result = await service.applyContractsToNeo4j(contractFiles);
 
       expect(result.success).toBe(true);
 
@@ -780,6 +843,152 @@ describe("ContractsService", () => {
         call[0].includes("MODULE_DEPENDENCY"),
       );
       expect(dependencyCalls.length).toBe(3);
+    });
+
+    it("should store contract file hash in Module node", async () => {
+      const testHash = "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1";
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: testHash,
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module for hash verification",
+          },
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify hash was stored in Module node
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("contractFileHash"),
+        expect.objectContaining({
+          contractFileHash: testHash,
+        }),
+      );
+    });
+
+    it("should store different hashes for different contract files", async () => {
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "module-1.yml",
+          filePath: "/test/module-1.yml",
+          fileHash: "hash111",
+          content: {
+            id: "module-1",
+            type: "service",
+            category: "backend",
+            description: "First module",
+          },
+        },
+        {
+          fileName: "module-2.yml",
+          filePath: "/test/module-2.yml",
+          fileHash: "hash222",
+          content: {
+            id: "module-2",
+            type: "controller",
+            category: "api",
+            description: "Second module",
+          },
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify first module has correct hash
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({
+          module_id: "module-1",
+          contractFileHash: "hash111",
+        }),
+      );
+
+      // Verify second module has correct hash
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MERGE (m:Module {module_id: $module_id})"),
+        expect.objectContaining({
+          module_id: "module-2",
+          contractFileHash: "hash222",
+        }),
+      );
+    });
+  });
+
+  describe("getAllContracts - hash calculation", () => {
+    const testFixturesPath = path.join(__dirname, "test-fixtures");
+
+    it("should calculate SHA256 hash for each contract file", async () => {
+      const validPattern = path.join(
+        testFixturesPath,
+        "valid-contract-minimal.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getAllContracts();
+
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0].fileHash).toBeDefined();
+      expect(result[0].fileHash).toMatch(/^[a-f0-9]{64}$/); // SHA256 produces 64 hex characters
+    });
+
+    it("should calculate same hash for same file content", async () => {
+      const testContent = "id: test\ntype: service\ncategory: backend\ndescription: Test";
+      const expectedHash = crypto
+        .createHash("sha256")
+        .update(testContent)
+        .digest("hex");
+
+      const validPattern = path.join(
+        testFixturesPath,
+        "valid-contract-minimal.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result1 = await service.getAllContracts();
+      const result2 = await service.getAllContracts();
+
+      expect(result1[0].fileHash).toBe(result2[0].fileHash);
+    });
+
+    it("should include hash in ContractFileDto", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getAllContracts();
+
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThan(0);
+      
+      result.forEach((contract) => {
+        expect(contract.fileName).toBeDefined();
+        expect(contract.filePath).toBeDefined();
+        expect(contract.content).toBeDefined();
+        expect(contract.fileHash).toBeDefined();
+        expect(typeof contract.fileHash).toBe("string");
+        expect(contract.fileHash.length).toBe(64); // SHA256 hash length
+      });
+    });
+
+    it("should calculate different hashes for different file contents", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getAllContracts();
+
+      expect(result.length).toBeGreaterThan(1);
+      
+      const hashes = result.map((c) => c.fileHash);
+      const uniqueHashes = new Set(hashes);
+      
+      // All hashes should be unique (different files should have different hashes)
+      expect(uniqueHashes.size).toBe(hashes.length);
     });
   });
 });

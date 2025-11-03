@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as fs from "fs";
 import * as path from "path";
+import * as crypto from "crypto";
 import * as yaml from "js-yaml";
 import { glob } from "glob";
 import { ContractSchema, Contract } from "./contract.schema";
@@ -49,10 +50,17 @@ export class ContractsService {
           const fileContent = fs.readFileSync(file, "utf8");
           const parsedContract = yaml.load(fileContent) as Contract;
 
+          // Calculate SHA256 hash of the file content
+          const fileHash = crypto
+            .createHash("sha256")
+            .update(fileContent)
+            .digest("hex");
+
           contracts.push({
             fileName: path.basename(file),
             filePath: file,
             content: parsedContract,
+            fileHash,
           });
 
           this.logger.log(`Successfully parsed: ${path.basename(file)}`);
@@ -255,10 +263,10 @@ export class ContractsService {
   /**
    * Apply contracts data to Neo4j database
    * Clears all existing data and creates Module nodes, Part nodes, and their relationships
-   * @param contracts Array of contracts to apply
+   * @param contractFiles Array of contract files with hash to apply
    * @returns Object with success status and number of modules processed
    */
-  async applyContractsToNeo4j(contracts: Contract[]): Promise<{
+  async applyContractsToNeo4j(contractFiles: ContractFileDto[]): Promise<{
     success: boolean;
     modulesProcessed: number;
     partsProcessed: number;
@@ -273,21 +281,24 @@ export class ContractsService {
       this.logger.log("✓ Database cleared successfully");
 
       this.logger.log(
-        `Starting to apply ${contracts.length} contracts to Neo4j`,
+        `Starting to apply ${contractFiles.length} contracts to Neo4j`,
       );
 
       let totalModulesProcessed = 0;
       let totalPartsProcessed = 0;
 
       // Process each contract
-      for (const contract of contracts) {
-        // Create or merge Module node
+      for (const contractFile of contractFiles) {
+        const contract = contractFile.content;
+        
+        // Create or merge Module node with file hash
         await session.run(
           `
           MERGE (m:Module {module_id: $module_id})
           SET m.type = $type,
               m.description = $description,
-              m.category = $category
+              m.category = $category,
+              m.contractFileHash = $contractFileHash
           RETURN m
           `,
           {
@@ -295,6 +306,7 @@ export class ContractsService {
             type: contract.type,
             description: contract.description,
             category: contract.category,
+            contractFileHash: contractFile.fileHash,
           },
         );
 
