@@ -251,17 +251,19 @@ test.describe('Apply Changes Page', () => {
     });
 
     await applyChangesPage.navigate();
-    await applyChangesPage.waitForApplyToComplete();
+    
+    // Wait explicitly for error state by checking for Try Again button
+    await expect(applyChangesPage.tryAgainButton).toBeVisible({ timeout: 10000 });
 
-    // Verify error state first
+    // Verify error state
     const hasFailed = await applyChangesPage.isApplyFailed();
     expect(hasFailed).toBe(true);
 
     // Click Try Again
     await applyChangesPage.tryAgainButton.click();
 
-    // Wait for success
-    await applyChangesPage.waitForApplyToComplete();
+    // Wait for success state
+    await expect(applyChangesPage.successIcon).toBeVisible({ timeout: 10000 });
 
     // Verify success state
     const isSuccessful = await applyChangesPage.isApplySuccessful();
