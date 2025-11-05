@@ -633,6 +633,158 @@ describe("ContractsService", () => {
       expect(duplicateError!.path).toBe("id");
       expect(duplicateError!.message).toBeTruthy();
     });
+
+    it("should detect duplicate dependencies within a single contract (simple case)", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-dependency-simple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-dependency-simple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const duplicateErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate dependency"),
+      );
+      expect(duplicateErrors.length).toBe(2); // Both occurrences should be flagged
+      
+      // Verify error message contains the module name
+      duplicateErrors.forEach((error) => {
+        expect(error.message).toContain("users-permissions");
+        expect(error.message).toContain("Each module should be listed only once in dependencies");
+        expect(error.path).toMatch(/^dependencies\.\d+\.module_id$/);
+      });
+    });
+
+    it("should detect multiple duplicate dependencies within a single contract", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-dependency-multiple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-dependency-multiple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const duplicateErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate dependency"),
+      );
+      
+      // Should have 4 errors: 2 for users-permissions + 2 for auth-service
+      expect(duplicateErrors.length).toBe(4);
+      
+      // Check that both duplicate modules are reported
+      const usersPermissionsErrors = duplicateErrors.filter((err) =>
+        err.message.includes("users-permissions"),
+      );
+      expect(usersPermissionsErrors.length).toBe(2);
+      
+      const authServiceErrors = duplicateErrors.filter((err) =>
+        err.message.includes("auth-service"),
+      );
+      expect(authServiceErrors.length).toBe(2);
+    });
+
+    it("should detect triple duplicate dependency within a single contract", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-dependency-triple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-dependency-triple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const duplicateErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate dependency"),
+      );
+      
+      // All 3 occurrences should be flagged
+      expect(duplicateErrors.length).toBe(3);
+      
+      // All should reference the same module
+      duplicateErrors.forEach((error) => {
+        expect(error.message).toContain("users-permissions");
+        expect(error.path).toMatch(/^dependencies\.\d+\.module_id$/);
+      });
+    });
+
+    it("should not report duplicate dependency errors for contracts with unique dependencies", async () => {
+      // Include both the contract and its dependency module for proper validation
+      const pattern = path.join(
+        testFixturesPath,
+        "{valid-contract-full,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(true);
+      expect(result.files.every((f) => f.valid)).toBe(true);
+
+      // Ensure no files have duplicate dependency errors
+      result.files.forEach((file) => {
+        if (file.errors) {
+          expect(
+            file.errors.every((err) => !err.message.includes("Duplicate dependency")),
+          ).toBe(true);
+        }
+      });
+    });
+
+    it("should provide clear error paths for duplicate dependency errors", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-dependency-simple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-dependency-simple.yml",
+      );
+
+      const duplicateErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate dependency"),
+      );
+
+      expect(duplicateErrors.length).toBe(2);
+      
+      // Check error paths point to the dependencies
+      expect(duplicateErrors[0].path).toMatch(/^dependencies\.\d+\.module_id$/);
+      expect(duplicateErrors[1].path).toMatch(/^dependencies\.\d+\.module_id$/);
+      
+      // Ensure error messages are clear
+      duplicateErrors.forEach((error) => {
+        expect(error.message).toBeTruthy();
+        expect(error.message).toContain("Duplicate dependency");
+        expect(error.message).toContain("Each module should be listed only once");
+      });
+    });
   });
 
   describe("getAllContracts", () => {

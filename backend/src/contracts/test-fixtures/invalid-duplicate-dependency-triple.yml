@@ -1,0 +1,17 @@
+id: test-module-triple-duplicate-dependency
+type: controller
+category: api
+description: Test module with same dependency listed three times
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+  - module_id: users-permissions
+    parts:
+      - part_id: name
+        type: string
+  - module_id: users-permissions
+    parts:
+      - part_id: checkPermission
+        type: function
