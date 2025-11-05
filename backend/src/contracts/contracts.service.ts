@@ -268,6 +268,39 @@ export class ContractsService {
           }
         }
 
+        // Validation: Check for duplicate part_id within each dependency's parts array
+        if (validationResult.success && contract.dependencies) {
+          for (let i = 0; i < contract.dependencies.length; i++) {
+            const dep = contract.dependencies[i];
+            if (dep.parts && Array.isArray(dep.parts)) {
+              const seenPartIds = new Set<string>();
+              const duplicatePartIds = new Set<string>();
+              
+              for (let j = 0; j < dep.parts.length; j++) {
+                const part = dep.parts[j];
+                if (seenPartIds.has(part.part_id)) {
+                  duplicatePartIds.add(part.part_id);
+                } else {
+                  seenPartIds.add(part.part_id);
+                }
+              }
+              
+              // Add errors for all parts with duplicate part_ids
+              if (duplicatePartIds.size > 0) {
+                for (let j = 0; j < dep.parts.length; j++) {
+                  const part = dep.parts[j];
+                  if (duplicatePartIds.has(part.part_id)) {
+                    errors.push({
+                      path: `dependencies.${i}.parts.${j}.part_id`,
+                      message: `Duplicate part_id "${part.part_id}" in dependency on module "${dep.module_id}". Each part should be referenced only once per dependency`,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // Cross-contract validation: Check if referenced module IDs exist
         if (validationResult.success && contract.dependencies) {
           for (let i = 0; i < contract.dependencies.length; i++) {

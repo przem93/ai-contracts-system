@@ -1,0 +1,17 @@
+id: test-module-duplicates-across-dependencies
+type: controller
+category: api
+description: Test module with duplicate parts in different dependencies
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: id
+        type: string
+  - module_id: simple-service
+    parts:
+      - part_id: id
+        type: string
+      - part_id: id
+        type: string

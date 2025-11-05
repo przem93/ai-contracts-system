@@ -882,6 +882,201 @@ describe("ContractsService", () => {
       expect(selfDependencyError!.message).toContain("complex-self-dependent");
       expect(selfDependencyError!.path).toBe("dependencies.1.module_id");
     });
+
+    it("should detect duplicate part_id within a single dependency (simple case)", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-parts-in-dependency-simple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate part_id"),
+      );
+      expect(duplicatePartErrors.length).toBe(2); // Both occurrences should be flagged
+      
+      // Verify error message contains the part_id and module name
+      duplicatePartErrors.forEach((error) => {
+        expect(error.message).toContain("id");
+        expect(error.message).toContain("users-permissions");
+        expect(error.message).toContain("Each part should be referenced only once per dependency");
+        expect(error.path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
+      });
+    });
+
+    it("should detect multiple duplicate part_ids within a single dependency", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-parts-in-dependency-multiple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-multiple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate part_id"),
+      );
+      
+      // Should have 4 errors: 2 for "id" + 2 for "name"
+      expect(duplicatePartErrors.length).toBe(4);
+      
+      // Check that both duplicate part_ids are reported
+      const idErrors = duplicatePartErrors.filter((err) =>
+        err.message.includes('part_id "id"'),
+      );
+      expect(idErrors.length).toBe(2);
+      
+      const nameErrors = duplicatePartErrors.filter((err) =>
+        err.message.includes('part_id "name"'),
+      );
+      expect(nameErrors.length).toBe(2);
+    });
+
+    it("should detect triple occurrence of same part_id within a dependency", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-parts-in-dependency-triple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-triple.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate part_id"),
+      );
+      
+      // All 3 occurrences should be flagged
+      expect(duplicatePartErrors.length).toBe(3);
+      
+      // All should reference the same part_id
+      duplicatePartErrors.forEach((error) => {
+        expect(error.message).toContain('part_id "id"');
+        expect(error.path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
+      });
+    });
+
+    it("should detect duplicate parts across multiple dependencies independently", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-duplicate-parts-across-multiple-dependencies,valid-dependency-module,simple-service}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-parts-across-multiple-dependencies.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate part_id"),
+      );
+      
+      // Should have 4 errors: 2 in first dependency + 2 in second dependency
+      expect(duplicatePartErrors.length).toBe(4);
+      
+      // Check errors for first dependency (users-permissions)
+      const dep0Errors = duplicatePartErrors.filter((err) =>
+        err.path.startsWith("dependencies.0."),
+      );
+      expect(dep0Errors.length).toBe(2);
+      dep0Errors.forEach((error) => {
+        expect(error.message).toContain("users-permissions");
+      });
+      
+      // Check errors for second dependency (simple-service)
+      const dep1Errors = duplicatePartErrors.filter((err) =>
+        err.path.startsWith("dependencies.1."),
+      );
+      expect(dep1Errors.length).toBe(2);
+      dep1Errors.forEach((error) => {
+        expect(error.message).toContain("simple-service");
+      });
+    });
+
+    it("should not report duplicate part errors for contracts with unique parts per dependency", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{valid-contract-full,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(true);
+      expect(result.files.every((f) => f.valid)).toBe(true);
+
+      // Ensure no files have duplicate part_id errors
+      result.files.forEach((file) => {
+        if (file.errors) {
+          expect(
+            file.errors.every((err) => !err.message.includes("Duplicate part_id")),
+          ).toBe(true);
+        }
+      });
+    });
+
+    it("should provide clear error paths for duplicate part_id errors", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-parts-in-dependency-simple.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
+      );
+
+      const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("Duplicate part_id"),
+      );
+
+      expect(duplicatePartErrors.length).toBe(2);
+      
+      // Check error paths point to the dependency parts
+      expect(duplicatePartErrors[0].path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
+      expect(duplicatePartErrors[1].path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
+      
+      // Ensure error messages are clear
+      duplicatePartErrors.forEach((error) => {
+        expect(error.message).toBeTruthy();
+        expect(error.message).toContain("Duplicate part_id");
+        expect(error.message).toContain("Each part should be referenced only once per dependency");
+      });
+    });
   });
 
   describe("getAllContracts", () => {
