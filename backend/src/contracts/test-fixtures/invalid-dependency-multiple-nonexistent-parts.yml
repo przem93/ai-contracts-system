@@ -1,0 +1,15 @@
+id: test-module-with-multiple-nonexistent-parts
+type: controller
+category: api
+description: Test module with dependency referencing multiple non-existent part IDs
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: nonexistent-part-1
+        type: string
+      - part_id: nonexistent-part-2
+        type: function
+      - part_id: id
+        type: string
+      - part_id: nonexistent-part-3
+        type: class

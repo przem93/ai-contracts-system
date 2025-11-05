@@ -212,7 +212,7 @@ export class ContractsService {
                 message: `Referenced module "${dep.module_id}" does not exist`,
               });
             } else {
-              // Validate dependency part types
+              // Validate dependency part types and existence
               const referencedParts = moduleParts.get(dep.module_id);
               if (dep.parts && Array.isArray(dep.parts)) {
                 for (let j = 0; j < dep.parts.length; j++) {
@@ -221,10 +221,17 @@ export class ContractsService {
                     const matchingPart = referencedParts.find(
                       (p) => p.id === depPart.part_id,
                     );
-                    if (matchingPart && matchingPart.type !== depPart.type) {
+                    if (!matchingPart) {
+                      // Part ID doesn't exist in the referenced module
+                      errors.push({
+                        path: `dependencies.${i}.parts.${j}.part_id`,
+                        message: `Part "${depPart.part_id}" does not exist in module "${dep.module_id}"`,
+                      });
+                    } else if (matchingPart.type !== depPart.type) {
+                      // Part exists but type doesn't match
                       errors.push({
                         path: `dependencies.${i}.parts.${j}.type`,
-                        message: `Part type mismatch: expected "${matchingPart.type}" but got "${depPart.type}"`,
+                        message: `Part type mismatch for "${depPart.part_id}": expected "${matchingPart.type}" but got "${depPart.type}"`,
                       });
                     }
                   }

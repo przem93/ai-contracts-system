@@ -397,6 +397,119 @@ describe("ContractsService", () => {
         ),
       ).toBe(true);
     });
+
+    it("should detect non-existent part ID in dependency", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-dependency-nonexistent-part-id,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-dependency-nonexistent-part-id.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const nonExistentPartError = invalidFile!.errors!.find((err) =>
+        err.message.includes("does not exist in module"),
+      );
+      expect(nonExistentPartError).toBeDefined();
+      expect(nonExistentPartError!.message).toContain("nonexistent-part");
+      expect(nonExistentPartError!.message).toContain("users-permissions");
+      expect(nonExistentPartError!.path).toContain("part_id");
+    });
+
+    it("should detect multiple non-existent part IDs in dependencies", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-dependency-multiple-nonexistent-parts,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) =>
+          f.fileName === "invalid-dependency-multiple-nonexistent-parts.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const nonExistentPartErrors = invalidFile!.errors!.filter((err) =>
+        err.message.includes("does not exist in module"),
+      );
+      expect(nonExistentPartErrors.length).toBe(3);
+
+      // Verify that all three non-existent parts are detected
+      expect(
+        nonExistentPartErrors.some((err) =>
+          err.message.includes("nonexistent-part-1"),
+        ),
+      ).toBe(true);
+      expect(
+        nonExistentPartErrors.some((err) =>
+          err.message.includes("nonexistent-part-2"),
+        ),
+      ).toBe(true);
+      expect(
+        nonExistentPartErrors.some((err) =>
+          err.message.includes("nonexistent-part-3"),
+        ),
+      ).toBe(true);
+    });
+
+    it("should detect both non-existent part IDs and type mismatches", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-dependency-part-id-and-type-mismatch,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) =>
+          f.fileName === "invalid-dependency-part-id-and-type-mismatch.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBe(2);
+
+      // Should have one type mismatch error for "id" part
+      const typeMismatchError = invalidFile!.errors!.find((err) =>
+        err.message.includes("Part type mismatch"),
+      );
+      expect(typeMismatchError).toBeDefined();
+      expect(typeMismatchError!.message).toContain("id");
+
+      // Should have one non-existent part error for "nonexistent-part"
+      const nonExistentPartError = invalidFile!.errors!.find((err) =>
+        err.message.includes("does not exist in module"),
+      );
+      expect(nonExistentPartError).toBeDefined();
+      expect(nonExistentPartError!.message).toContain("nonexistent-part");
+    });
+
+    it("should pass validation when all referenced parts exist and types match", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.validateContracts();
+
+      expect(result).toBeDefined();
+      expect(result.valid).toBe(true);
+      expect(result.files.every((file) => file.valid)).toBe(true);
+    });
   });
 
   describe("getAllContracts", () => {
