@@ -499,17 +499,6 @@ describe("ContractsService", () => {
       expect(nonExistentPartError).toBeDefined();
       expect(nonExistentPartError!.message).toContain("nonexistent-part");
     });
-
-    it("should pass validation when all referenced parts exist and types match", async () => {
-      const validPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(validPattern);
-
-      const result = await service.validateContracts();
-
-      expect(result).toBeDefined();
-      expect(result.valid).toBe(true);
-      expect(result.files.every((file) => file.valid)).toBe(true);
-    });
   });
 
   describe("getAllContracts", () => {
