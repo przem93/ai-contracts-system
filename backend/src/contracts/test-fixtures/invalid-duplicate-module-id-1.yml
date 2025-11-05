@@ -1,0 +1,7 @@
+id: duplicate-module
+type: service
+category: backend
+description: First module with duplicate ID
+parts:
+  - id: part1
+    type: string

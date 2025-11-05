@@ -1,0 +1,4 @@
+id: another-duplicate
+type: service
+category: backend
+description: First module with another duplicate ID
