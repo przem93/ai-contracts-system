@@ -227,6 +227,34 @@ export class ContractsService {
           }
         }
 
+        // Validation: Check for duplicate module_id in dependencies array
+        if (validationResult.success && contract.dependencies) {
+          const seenModuleIds = new Set<string>();
+          const duplicateModuleIds = new Set<string>();
+          
+          for (let i = 0; i < contract.dependencies.length; i++) {
+            const dep = contract.dependencies[i];
+            if (seenModuleIds.has(dep.module_id)) {
+              duplicateModuleIds.add(dep.module_id);
+            } else {
+              seenModuleIds.add(dep.module_id);
+            }
+          }
+          
+          // Add errors for all dependencies with duplicate module_ids
+          if (duplicateModuleIds.size > 0) {
+            for (let i = 0; i < contract.dependencies.length; i++) {
+              const dep = contract.dependencies[i];
+              if (duplicateModuleIds.has(dep.module_id)) {
+                errors.push({
+                  path: `dependencies.${i}.module_id`,
+                  message: `Duplicate dependency on module "${dep.module_id}". Each module should be listed only once in dependencies`,
+                });
+              }
+            }
+          }
+        }
+
         // Cross-contract validation: Check if referenced module IDs exist
         if (validationResult.success && contract.dependencies) {
           for (let i = 0; i < contract.dependencies.length; i++) {

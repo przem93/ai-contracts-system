@@ -1,0 +1,21 @@
+id: test-module-multiple-duplicate-dependencies
+type: controller
+category: api
+description: Test module with multiple duplicate dependencies
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+  - module_id: auth-service
+    parts:
+      - part_id: login
+        type: function
+  - module_id: users-permissions
+    parts:
+      - part_id: name
+        type: string
+  - module_id: auth-service
+    parts:
+      - part_id: logout
+        type: function
