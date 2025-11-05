@@ -16,6 +16,8 @@ export class ContractsListPage extends BasePage {
   readonly noContractsAlert: Locator;
   readonly contractCards: Locator;
   readonly verifyContractsButton: Locator;
+  readonly checkModifiedErrorAlert: Locator;
+  readonly noChangesAlert: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -29,7 +31,9 @@ export class ContractsListPage extends BasePage {
     this.errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error loading contracts' });
     this.noContractsAlert = page.locator('[role="alert"]').filter({ hasText: 'No contracts found' });
     this.contractCards = page.getByTestId('contract-card');
-    this.verifyContractsButton = page.getByRole('button', { name: 'Verify Contracts' });
+    this.verifyContractsButton = page.getByTestId('verify-contracts-button');
+    this.checkModifiedErrorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error checking contract modifications' });
+    this.noChangesAlert = page.locator('[role="alert"]').filter({ hasText: 'No changes detected' });
   }
 
   /**

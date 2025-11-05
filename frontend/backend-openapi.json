@@ -70,6 +70,32 @@
         ]
       }
     },
+    "/api/contracts/check-if-contract-modified": {
+      "get": {
+        "operationId": "ContractsController_checkIfContractsModified",
+        "summary": "Check if contract files have been modified",
+        "description": "Compares current contract file hashes with stored hashes in Neo4j database to detect modifications, additions, and removals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns information about modified, added, and removed contracts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckModifiedResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to check contract modifications"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
     "/api/contracts/apply": {
       "post": {
         "operationId": "ContractsController_applyContracts",
@@ -235,6 +261,95 @@
           "modulesProcessed",
           "partsProcessed",
           "message"
+        ]
+      },
+      "ModifiedContractDto": {
+        "type": "object",
+        "properties": {
+          "moduleId": {
+            "type": "string",
+            "description": "The module ID from the contract",
+            "example": "users-get"
+          },
+          "fileName": {
+            "type": "string",
+            "description": "The name of the contract file",
+            "example": "users-get.yml"
+          },
+          "filePath": {
+            "type": "string",
+            "description": "The full path to the contract file",
+            "example": "/contracts/users-get.yml"
+          },
+          "currentHash": {
+            "type": "string",
+            "description": "The current hash of the contract file",
+            "example": "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1"
+          },
+          "storedHash": {
+            "type": "string",
+            "description": "The stored hash from Neo4j database (null if contract is new)",
+            "example": "b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "description": "The status of the contract: 'modified', 'added', or 'removed'",
+            "example": "modified",
+            "enum": ["modified", "added", "removed"]
+          }
+        },
+        "required": [
+          "moduleId",
+          "fileName",
+          "filePath",
+          "currentHash",
+          "status"
+        ]
+      },
+      "CheckModifiedResponseDto": {
+        "type": "object",
+        "properties": {
+          "hasChanges": {
+            "type": "boolean",
+            "description": "Whether any contracts have been modified, added, or removed",
+            "example": true
+          },
+          "totalChanges": {
+            "type": "number",
+            "description": "Total number of contracts that have changed",
+            "example": 3
+          },
+          "modifiedCount": {
+            "type": "number",
+            "description": "Number of modified contracts",
+            "example": 2
+          },
+          "addedCount": {
+            "type": "number",
+            "description": "Number of newly added contracts",
+            "example": 1
+          },
+          "removedCount": {
+            "type": "number",
+            "description": "Number of removed contracts",
+            "example": 0
+          },
+          "changes": {
+            "type": "array",
+            "description": "List of contracts that have been modified, added, or removed",
+            "items": {
+              "$ref": "#/components/schemas/ModifiedContractDto"
+            }
+          }
+        },
+        "required": [
+          "hasChanges",
+          "totalChanges",
+          "modifiedCount",
+          "addedCount",
+          "removedCount",
+          "changes"
         ]
       }
     }

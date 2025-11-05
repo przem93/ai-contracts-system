@@ -11,12 +11,22 @@ import {
   Button
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useContractsControllerGetAllContracts } from '../api/generated/contracts/contracts';
+import { 
+  useContractsControllerGetAllContracts,
+  useContractsControllerCheckIfContractsModified 
+} from '../api/generated/contracts/contracts';
 
 function ContractsListPage() {
   const navigate = useNavigate();
   // Use the generated React Query hook to fetch contracts
   const { data: contracts, isLoading, error } = useContractsControllerGetAllContracts();
+  
+  // Check if contracts have been modified
+  const { 
+    data: checkModifiedData, 
+    isLoading: isCheckingModified, 
+    error: checkModifiedError 
+  } = useContractsControllerCheckIfContractsModified();
 
   return (
     <Container maxWidth="md">
@@ -98,14 +108,28 @@ function ContractsListPage() {
             </CardContent>
           </Card>
 
+          {checkModifiedError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Error checking contract modifications: {checkModifiedError instanceof Error ? checkModifiedError.message : 'Unknown error'}
+            </Alert>
+          )}
+
+          {checkModifiedData && !checkModifiedData.hasChanges && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              No changes detected. All contracts are up to date with the database.
+            </Alert>
+          )}
+
           <Button
             variant="contained"
             color="primary"
             size="large"
             sx={{ mt: 2 }}
             onClick={() => navigate('/validation')}
+            disabled={isCheckingModified || !checkModifiedData?.hasChanges}
+            data-testid="verify-contracts-button"
           >
-            Verify Contracts
+            {isCheckingModified ? 'Checking for changes...' : 'Verify Contracts'}
           </Button>
         </Stack>
       </Box>
