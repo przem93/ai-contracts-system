@@ -255,6 +255,19 @@ export class ContractsService {
           }
         }
 
+        // Validation: Check for self-dependency (module depending on itself)
+        if (validationResult.success && contract.dependencies && contract.id) {
+          for (let i = 0; i < contract.dependencies.length; i++) {
+            const dep = contract.dependencies[i];
+            if (dep.module_id === contract.id) {
+              errors.push({
+                path: `dependencies.${i}.module_id`,
+                message: `Module "${contract.id}" cannot depend on itself. Self-dependencies are not allowed`,
+              });
+            }
+          }
+        }
+
         // Cross-contract validation: Check if referenced module IDs exist
         if (validationResult.success && contract.dependencies) {
           for (let i = 0; i < contract.dependencies.length; i++) {

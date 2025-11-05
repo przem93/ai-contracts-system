@@ -1,0 +1,14 @@
+id: self-dependent-module
+type: service
+category: backend
+description: A module that incorrectly depends on itself
+parts:
+  - id: function1
+    type: function
+  - id: function2
+    type: function
+dependencies:
+  - module_id: self-dependent-module
+    parts:
+      - part_id: function1
+        type: function
