@@ -1,0 +1,13 @@
+id: test-module-with-mixed-errors
+type: controller
+category: api
+description: Test module with both non-existent part IDs and type mismatches
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: function
+      - part_id: nonexistent-part
+        type: string
+      - part_id: name
+        type: string

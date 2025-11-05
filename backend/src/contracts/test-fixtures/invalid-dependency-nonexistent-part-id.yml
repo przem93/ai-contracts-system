@@ -1,0 +1,11 @@
+id: test-module-with-nonexistent-part
+type: controller
+category: api
+description: Test module with dependency referencing non-existent part ID
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: nonexistent-part
+        type: string
