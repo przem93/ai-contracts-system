@@ -130,6 +130,7 @@ export class ContractsService {
         contract: any;
       }> = [];
       const availableModuleIds = new Set<string>();
+      const moduleIdToFiles: Map<string, string[]> = new Map();
       const moduleParts: Map<
         string,
         Array<{ id: string; type: string }>
@@ -155,6 +156,12 @@ export class ContractsService {
             typeof parsedContract.id === "string"
           ) {
             availableModuleIds.add(parsedContract.id);
+
+            // Track which files use each module ID for duplicate detection
+            if (!moduleIdToFiles.has(parsedContract.id)) {
+              moduleIdToFiles.set(parsedContract.id, []);
+            }
+            moduleIdToFiles.get(parsedContract.id)!.push(fileName);
 
             // Store module parts for type validation
             if (
@@ -200,6 +207,24 @@ export class ContractsService {
               message: err.message,
             })),
           );
+        }
+
+        // Cross-contract validation: Check for duplicate module IDs
+        if (
+          validationResult.success &&
+          contract.id &&
+          moduleIdToFiles.has(contract.id)
+        ) {
+          const filesWithSameId = moduleIdToFiles.get(contract.id)!;
+          if (filesWithSameId.length > 1) {
+            const otherFiles = filesWithSameId
+              .filter((f) => f !== fileName)
+              .join(", ");
+            errors.push({
+              path: "id",
+              message: `Duplicate module id "${contract.id}" found in files: ${otherFiles}`,
+            });
+          }
         }
 
         // Cross-contract validation: Check if referenced module IDs exist

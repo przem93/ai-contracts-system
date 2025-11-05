@@ -499,6 +499,140 @@ describe("ContractsService", () => {
       expect(nonExistentPartError).toBeDefined();
       expect(nonExistentPartError!.message).toContain("nonexistent-part");
     });
+
+    it("should detect duplicate module IDs across different files", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-duplicate-module-id-1,invalid-duplicate-module-id-2}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      expect(result.files).toBeDefined();
+      expect(result.files.length).toBe(2);
+
+      // Both files should be marked as invalid due to duplicate module ID
+      expect(result.files.every((f) => !f.valid)).toBe(true);
+
+      // Check that both files have duplicate module ID error
+      const file1 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-1.yml",
+      );
+      const file2 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-2.yml",
+      );
+
+      expect(file1).toBeDefined();
+      expect(file1!.errors).toBeDefined();
+      expect(file1!.errors!.length).toBeGreaterThan(0);
+
+      expect(file2).toBeDefined();
+      expect(file2!.errors).toBeDefined();
+      expect(file2!.errors!.length).toBeGreaterThan(0);
+
+      // Check that the error message mentions duplicate module ID
+      const duplicateError1 = file1!.errors!.find((err) =>
+        err.message.includes("Duplicate module id"),
+      );
+      expect(duplicateError1).toBeDefined();
+      expect(duplicateError1!.path).toBe("id");
+      expect(duplicateError1!.message).toContain("duplicate-module");
+      expect(duplicateError1!.message).toContain(
+        "invalid-duplicate-module-id-2.yml",
+      );
+
+      const duplicateError2 = file2!.errors!.find((err) =>
+        err.message.includes("Duplicate module id"),
+      );
+      expect(duplicateError2).toBeDefined();
+      expect(duplicateError2!.path).toBe("id");
+      expect(duplicateError2!.message).toContain("duplicate-module");
+      expect(duplicateError2!.message).toContain(
+        "invalid-duplicate-module-id-1.yml",
+      );
+    });
+
+    it("should detect multiple duplicate module IDs in the same validation", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-duplicate-module-id-*.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      expect(result.files).toBeDefined();
+      expect(result.files.length).toBe(4);
+
+      // All files should be invalid due to duplicate module IDs
+      expect(result.files.every((f) => !f.valid)).toBe(true);
+
+      // Check first pair of duplicates (duplicate-module)
+      const file1 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-1.yml",
+      );
+      const file2 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-2.yml",
+      );
+
+      expect(file1!.errors!.some((e) => e.message.includes("duplicate-module"))).toBe(true);
+      expect(file2!.errors!.some((e) => e.message.includes("duplicate-module"))).toBe(true);
+
+      // Check second pair of duplicates (another-duplicate)
+      const file3 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-3.yml",
+      );
+      const file4 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-4.yml",
+      );
+
+      expect(file3!.errors!.some((e) => e.message.includes("another-duplicate"))).toBe(true);
+      expect(file4!.errors!.some((e) => e.message.includes("another-duplicate"))).toBe(true);
+    });
+
+    it("should not report duplicate errors for contracts with unique module IDs", async () => {
+      const pattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(true);
+      expect(result.files.every((f) => f.valid)).toBe(true);
+
+      // Ensure no files have duplicate module ID errors
+      result.files.forEach((file) => {
+        if (file.errors) {
+          expect(
+            file.errors.every((err) => !err.message.includes("Duplicate module id")),
+          ).toBe(true);
+        }
+      });
+    });
+
+    it("should provide clear error path for duplicate module ID errors", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-duplicate-module-id-1,invalid-duplicate-module-id-2}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      const file1 = result.files.find(
+        (f) => f.fileName === "invalid-duplicate-module-id-1.yml",
+      );
+
+      const duplicateError = file1!.errors!.find((err) =>
+        err.message.includes("Duplicate module id"),
+      );
+
+      expect(duplicateError).toBeDefined();
+      expect(duplicateError!.path).toBe("id");
+      expect(duplicateError!.message).toBeTruthy();
+    });
   });
 
   describe("getAllContracts", () => {

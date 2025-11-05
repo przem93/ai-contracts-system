@@ -1,0 +1,7 @@
+id: duplicate-module
+type: controller
+category: api
+description: Second module with duplicate ID
+parts:
+  - id: part2
+    type: function
