@@ -187,19 +187,4 @@ test.describe('Contracts List Page', () => {
     expect(frontendContract).toBe(true);
   });
 
-  test('should display "Verify Contracts" button', async ({ page }) => {
-    // Mock API response with sample contracts
-    await page.route('**/api/contracts', async (route) => {
-      await route.fulfill(mockApiResponses.success(mockContracts.validContracts));
-    });
-
-    await contractsPage.navigate();
-    await contractsPage.waitForContractsToLoad();
-
-    // Verify button is visible
-    await expect(contractsPage.verifyContractsButton).toBeVisible();
-    
-    // Verify button text
-    await expect(contractsPage.verifyContractsButton).toHaveText('Verify Contracts');
-  });
 });

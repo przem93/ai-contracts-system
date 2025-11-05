@@ -26,6 +26,7 @@ import type {
 
 import type {
   ApplyResponseDto,
+  CheckModifiedResponseDto,
   ContractFileDto,
   ValidationResponseDto
 } from '.././model';
@@ -207,6 +208,98 @@ export function useContractsControllerValidateContracts<TData = Awaited<ReturnTy
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getContractsControllerValidateContractsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Compares current contract file hashes with stored hashes in Neo4j database to detect modifications, additions, and removals
+ * @summary Check if contract files have been modified
+ */
+export const contractsControllerCheckIfContractsModified = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<CheckModifiedResponseDto>(
+      {url: `http://localhost/api/contracts/check-if-contract-modified`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getContractsControllerCheckIfContractsModifiedQueryKey = () => {
+    return [
+    `http://localhost/api/contracts/check-if-contract-modified`
+    ] as const;
+    }
+
+    
+export const getContractsControllerCheckIfContractsModifiedQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getContractsControllerCheckIfContractsModifiedQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>> = ({ signal }) => contractsControllerCheckIfContractsModified(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ContractsControllerCheckIfContractsModifiedQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>>
+export type ContractsControllerCheckIfContractsModifiedQueryError = unknown
+
+
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Check if contract files have been modified
+ */
+
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getContractsControllerCheckIfContractsModifiedQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

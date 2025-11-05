@@ -148,3 +148,68 @@ export const mockApiResponses = {
     body: JSON.stringify({ message: 'Bad request' }),
   },
 };
+
+/**
+ * Mock data for check-if-contract-modified endpoint
+ */
+export const mockCheckModified = {
+  // Has changes
+  hasChanges: {
+    hasChanges: true,
+    totalChanges: 2,
+    modifiedCount: 1,
+    addedCount: 1,
+    removedCount: 0,
+    changes: [
+      {
+        moduleId: 'users-get',
+        fileName: 'example-contract.yml',
+        filePath: '/contracts/example-contract.yml',
+        currentHash: 'a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1',
+        storedHash: 'b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3',
+        status: 'modified',
+      },
+      {
+        moduleId: 'users-permissions',
+        fileName: 'example-dependency.yml',
+        filePath: '/contracts/example-dependency.yml',
+        currentHash: 'c5f4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4',
+        storedHash: null,
+        status: 'added',
+      },
+    ],
+  },
+
+  // No changes
+  noChanges: {
+    hasChanges: false,
+    totalChanges: 0,
+    modifiedCount: 0,
+    addedCount: 0,
+    removedCount: 0,
+    changes: [],
+  },
+};
+
+export const mockCheckModifiedApiResponses = {
+  // Successful response with changes
+  hasChanges: {
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(mockCheckModified.hasChanges),
+  },
+
+  // Successful response with no changes
+  noChanges: {
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(mockCheckModified.noChanges),
+  },
+
+  // Server error
+  serverError: {
+    status: 500,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'Failed to check contract modifications' }),
+  },
+};
