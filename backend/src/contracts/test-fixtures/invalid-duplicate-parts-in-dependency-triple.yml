@@ -1,0 +1,13 @@
+id: test-module-triple-duplicate-parts
+type: controller
+category: api
+description: Test module with triple occurrence of same part_id
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: id
+        type: string
+      - part_id: id
+        type: string

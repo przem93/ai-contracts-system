@@ -1,0 +1,15 @@
+id: test-module-multiple-duplicate-parts
+type: controller
+category: api
+description: Test module with multiple duplicate part_ids in single dependency
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+      - part_id: name
+        type: string
+      - part_id: id
+        type: string
+      - part_id: name
+        type: string
