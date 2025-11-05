@@ -1,0 +1,22 @@
+id: complex-self-dependent
+type: service
+category: backend
+description: A module with multiple dependencies, including a self-dependency
+parts:
+  - id: method1
+    type: function
+  - id: method2
+    type: function
+dependencies:
+  - module_id: users-permissions
+    parts:
+      - part_id: id
+        type: string
+  - module_id: complex-self-dependent
+    parts:
+      - part_id: method1
+        type: function
+  - module_id: simple-service
+    parts:
+      - part_id: method2
+        type: function

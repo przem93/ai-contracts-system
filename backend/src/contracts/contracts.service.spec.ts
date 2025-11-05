@@ -785,6 +785,103 @@ describe("ContractsService", () => {
         expect(error.message).toContain("Each module should be listed only once");
       });
     });
+
+    it("should detect self-dependency (module depending on itself)", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-self-dependency.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-self-dependency.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+      expect(invalidFile!.errors!.length).toBeGreaterThan(0);
+
+      const selfDependencyError = invalidFile!.errors!.find((err) =>
+        err.message.includes("cannot depend on itself"),
+      );
+      expect(selfDependencyError).toBeDefined();
+      expect(selfDependencyError!.message).toContain("self-dependent-module");
+      expect(selfDependencyError!.message).toContain("Self-dependencies are not allowed");
+      expect(selfDependencyError!.path).toMatch(/^dependencies\.\d+\.module_id$/);
+    });
+
+    it("should not report self-dependency errors for valid contracts", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{valid-contract-full,valid-dependency-module}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(true);
+      expect(result.files.every((f) => f.valid)).toBe(true);
+
+      // Ensure no files have self-dependency errors
+      result.files.forEach((file) => {
+        if (file.errors) {
+          expect(
+            file.errors.every((err) => !err.message.includes("cannot depend on itself")),
+          ).toBe(true);
+        }
+      });
+    });
+
+    it("should provide clear error message for self-dependency", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "invalid-self-dependency.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-self-dependency.yml",
+      );
+
+      const selfDependencyError = invalidFile!.errors!.find((err) =>
+        err.message.includes("cannot depend on itself"),
+      );
+
+      expect(selfDependencyError).toBeDefined();
+      expect(selfDependencyError!.path).toBe("dependencies.0.module_id");
+      expect(selfDependencyError!.message).toBeTruthy();
+      expect(selfDependencyError!.message).toContain("self-dependent-module");
+    });
+
+    it("should detect self-dependency among multiple dependencies", async () => {
+      const pattern = path.join(
+        testFixturesPath,
+        "{invalid-self-dependency-with-others,valid-dependency-module,simple-service}.yml",
+      );
+      jest.spyOn(configService, "get").mockReturnValue(pattern);
+
+      const result = await service.validateContracts();
+
+      expect(result.valid).toBe(false);
+      const invalidFile = result.files.find(
+        (f) => f.fileName === "invalid-self-dependency-with-others.yml",
+      );
+      expect(invalidFile).toBeDefined();
+      expect(invalidFile!.valid).toBe(false);
+      expect(invalidFile!.errors).toBeDefined();
+
+      const selfDependencyError = invalidFile!.errors!.find((err) =>
+        err.message.includes("cannot depend on itself"),
+      );
+      expect(selfDependencyError).toBeDefined();
+      expect(selfDependencyError!.message).toContain("complex-self-dependent");
+      expect(selfDependencyError!.path).toBe("dependencies.1.module_id");
+    });
   });
 
   describe("getAllContracts", () => {
