@@ -58,6 +58,7 @@ describe("ContractsController", () => {
             getAllContracts: jest.fn(),
             validateContracts: jest.fn(),
             applyContractsToNeo4j: jest.fn(),
+            checkIfContractsModified: jest.fn(),
           },
         },
       ],
@@ -645,6 +646,325 @@ describe("ContractsController", () => {
       await expect(controller.applyContracts()).rejects.toThrow(
         "Service error getting contracts",
       );
+    });
+  });
+
+  describe("checkIfContractsModified", () => {
+    it("should return check result when no changes detected", async () => {
+      const mockCheckResult = {
+        hasChanges: false,
+        totalChanges: 0,
+        modifiedCount: 0,
+        addedCount: 0,
+        removedCount: 0,
+        changes: [],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result).toEqual(mockCheckResult);
+      expect(result.hasChanges).toBe(false);
+      expect(result.totalChanges).toBe(0);
+      expect(service.checkIfContractsModified).toHaveBeenCalled();
+    });
+
+    it("should return check result when changes are detected", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 2,
+        modifiedCount: 1,
+        addedCount: 1,
+        removedCount: 0,
+        changes: [
+          {
+            moduleId: "modified-module",
+            fileName: "modified.yml",
+            filePath: "/contracts/modified.yml",
+            currentHash: "newhash123",
+            storedHash: "oldhash123",
+            status: "modified" as const,
+          },
+          {
+            moduleId: "added-module",
+            fileName: "added.yml",
+            filePath: "/contracts/added.yml",
+            currentHash: "newhash456",
+            storedHash: null,
+            status: "added" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result).toEqual(mockCheckResult);
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(2);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.addedCount).toBe(1);
+      expect(result.removedCount).toBe(0);
+      expect(result.changes).toHaveLength(2);
+      expect(service.checkIfContractsModified).toHaveBeenCalled();
+    });
+
+    it("should return modified contracts with correct details", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 1,
+        modifiedCount: 1,
+        addedCount: 0,
+        removedCount: 0,
+        changes: [
+          {
+            moduleId: "users-get",
+            fileName: "users-get.yml",
+            filePath: "/contracts/users-get.yml",
+            currentHash: "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1",
+            storedHash: "b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3",
+            status: "modified" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.changes[0]).toHaveProperty("moduleId");
+      expect(result.changes[0]).toHaveProperty("fileName");
+      expect(result.changes[0]).toHaveProperty("filePath");
+      expect(result.changes[0]).toHaveProperty("currentHash");
+      expect(result.changes[0]).toHaveProperty("storedHash");
+      expect(result.changes[0]).toHaveProperty("status");
+      expect(result.changes[0].status).toBe("modified");
+    });
+
+    it("should return added contracts with null stored hash", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 1,
+        modifiedCount: 0,
+        addedCount: 1,
+        removedCount: 0,
+        changes: [
+          {
+            moduleId: "new-module",
+            fileName: "new-module.yml",
+            filePath: "/contracts/new-module.yml",
+            currentHash: "newhash789",
+            storedHash: null,
+            status: "added" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.changes[0].status).toBe("added");
+      expect(result.changes[0].storedHash).toBeNull();
+      expect(result.addedCount).toBe(1);
+    });
+
+    it("should return removed contracts with empty current hash", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 1,
+        modifiedCount: 0,
+        addedCount: 0,
+        removedCount: 1,
+        changes: [
+          {
+            moduleId: "removed-module",
+            fileName: "unknown",
+            filePath: "unknown",
+            currentHash: "",
+            storedHash: "oldhash999",
+            status: "removed" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.changes[0].status).toBe("removed");
+      expect(result.changes[0].currentHash).toBe("");
+      expect(result.removedCount).toBe(1);
+    });
+
+    it("should handle multiple changes of different types", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 3,
+        modifiedCount: 1,
+        addedCount: 1,
+        removedCount: 1,
+        changes: [
+          {
+            moduleId: "modified-module",
+            fileName: "modified.yml",
+            filePath: "/contracts/modified.yml",
+            currentHash: "newhash111",
+            storedHash: "oldhash111",
+            status: "modified" as const,
+          },
+          {
+            moduleId: "added-module",
+            fileName: "added.yml",
+            filePath: "/contracts/added.yml",
+            currentHash: "newhash222",
+            storedHash: null,
+            status: "added" as const,
+          },
+          {
+            moduleId: "removed-module",
+            fileName: "unknown",
+            filePath: "unknown",
+            currentHash: "",
+            storedHash: "oldhash333",
+            status: "removed" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.totalChanges).toBe(3);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.addedCount).toBe(1);
+      expect(result.removedCount).toBe(1);
+
+      const modified = result.changes.find((c) => c.status === "modified");
+      const added = result.changes.find((c) => c.status === "added");
+      const removed = result.changes.find((c) => c.status === "removed");
+
+      expect(modified).toBeDefined();
+      expect(added).toBeDefined();
+      expect(removed).toBeDefined();
+    });
+
+    it("should propagate service errors", async () => {
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockRejectedValue(
+          new Error("Failed to check contract modifications: Neo4j error"),
+        );
+
+      await expect(controller.checkIfContractsModified()).rejects.toThrow(
+        "Failed to check contract modifications: Neo4j error",
+      );
+    });
+
+    it("should return empty changes array when no contracts exist", async () => {
+      const mockCheckResult = {
+        hasChanges: false,
+        totalChanges: 0,
+        modifiedCount: 0,
+        addedCount: 0,
+        removedCount: 0,
+        changes: [],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(false);
+      expect(result.changes).toEqual([]);
+    });
+
+    it("should correctly count different types of changes", async () => {
+      const mockCheckResult = {
+        hasChanges: true,
+        totalChanges: 5,
+        modifiedCount: 2,
+        addedCount: 2,
+        removedCount: 1,
+        changes: [
+          {
+            moduleId: "mod1",
+            fileName: "mod1.yml",
+            filePath: "/contracts/mod1.yml",
+            currentHash: "hash1",
+            storedHash: "oldhash1",
+            status: "modified" as const,
+          },
+          {
+            moduleId: "mod2",
+            fileName: "mod2.yml",
+            filePath: "/contracts/mod2.yml",
+            currentHash: "hash2",
+            storedHash: "oldhash2",
+            status: "modified" as const,
+          },
+          {
+            moduleId: "add1",
+            fileName: "add1.yml",
+            filePath: "/contracts/add1.yml",
+            currentHash: "hash3",
+            storedHash: null,
+            status: "added" as const,
+          },
+          {
+            moduleId: "add2",
+            fileName: "add2.yml",
+            filePath: "/contracts/add2.yml",
+            currentHash: "hash4",
+            storedHash: null,
+            status: "added" as const,
+          },
+          {
+            moduleId: "rem1",
+            fileName: "unknown",
+            filePath: "unknown",
+            currentHash: "",
+            storedHash: "oldhash5",
+            status: "removed" as const,
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "checkIfContractsModified")
+        .mockResolvedValue(mockCheckResult);
+
+      const result = await controller.checkIfContractsModified();
+
+      expect(result.totalChanges).toBe(5);
+      expect(result.modifiedCount).toBe(2);
+      expect(result.addedCount).toBe(2);
+      expect(result.removedCount).toBe(1);
+
+      const modifiedChanges = result.changes.filter((c) => c.status === "modified");
+      const addedChanges = result.changes.filter((c) => c.status === "added");
+      const removedChanges = result.changes.filter((c) => c.status === "removed");
+
+      expect(modifiedChanges).toHaveLength(2);
+      expect(addedChanges).toHaveLength(2);
+      expect(removedChanges).toHaveLength(1);
     });
   });
 });

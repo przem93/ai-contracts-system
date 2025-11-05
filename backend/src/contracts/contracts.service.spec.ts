@@ -991,4 +991,423 @@ describe("ContractsService", () => {
       expect(uniqueHashes.size).toBe(hashes.length);
     });
   });
+
+  describe("checkIfContractsModified", () => {
+    beforeEach(() => {
+      mockSession.run.mockClear();
+      mockSession.close.mockClear();
+      jest.spyOn(neo4jService, "getSession").mockReturnValue(mockSession);
+    });
+
+    it("should detect no changes when hashes match", async () => {
+      const testHash = "abc123hash";
+      const testFixturesPath = path.join(__dirname, "test-fixtures");
+      const validPattern = path.join(
+        testFixturesPath,
+        "valid-contract-minimal.yml",
+      );
+
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      // Mock getAllContracts to return a contract with specific hash
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "valid-contract-minimal.yml",
+          filePath: validPattern,
+          fileHash: testHash,
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
+        },
+      ]);
+
+      // Mock Neo4j query to return same hash
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "test-module";
+              if (field === "storedHash") return testHash;
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(false);
+      expect(result.totalChanges).toBe(0);
+      expect(result.modifiedCount).toBe(0);
+      expect(result.addedCount).toBe(0);
+      expect(result.removedCount).toBe(0);
+      expect(result.changes).toEqual([]);
+
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MATCH (m:Module)"),
+      );
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should detect modified contracts when hashes differ", async () => {
+      const currentHash = "newhash123";
+      const storedHash = "oldhash456";
+      const testFixturesPath = path.join(__dirname, "test-fixtures");
+      const validPattern = path.join(
+        testFixturesPath,
+        "valid-contract-minimal.yml",
+      );
+
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "valid-contract-minimal.yml",
+          filePath: validPattern,
+          fileHash: currentHash,
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
+        },
+      ]);
+
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "test-module";
+              if (field === "storedHash") return storedHash;
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(1);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.addedCount).toBe(0);
+      expect(result.removedCount).toBe(0);
+      expect(result.changes).toHaveLength(1);
+      expect(result.changes[0]).toEqual({
+        moduleId: "test-module",
+        fileName: "valid-contract-minimal.yml",
+        filePath: validPattern,
+        currentHash,
+        storedHash,
+        status: "modified",
+      });
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should detect added contracts when no stored hash exists", async () => {
+      const currentHash = "newhash789";
+      const testFixturesPath = path.join(__dirname, "test-fixtures");
+      const validPattern = path.join(
+        testFixturesPath,
+        "valid-contract-minimal.yml",
+      );
+
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "new-contract.yml",
+          filePath: "/contracts/new-contract.yml",
+          fileHash: currentHash,
+          content: {
+            id: "new-module",
+            type: "service",
+            category: "backend",
+            description: "New module",
+          },
+        },
+      ]);
+
+      // Mock Neo4j query to return empty result (no stored contracts)
+      mockSession.run.mockResolvedValue({
+        records: [],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(1);
+      expect(result.modifiedCount).toBe(0);
+      expect(result.addedCount).toBe(1);
+      expect(result.removedCount).toBe(0);
+      expect(result.changes).toHaveLength(1);
+      expect(result.changes[0]).toEqual({
+        moduleId: "new-module",
+        fileName: "new-contract.yml",
+        filePath: "/contracts/new-contract.yml",
+        currentHash,
+        storedHash: null,
+        status: "added",
+      });
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should detect removed contracts when current file does not exist", async () => {
+      const storedHash = "removedhash123";
+
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+
+      // Mock getAllContracts to return empty array (no current contracts)
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+
+      // Mock Neo4j query to return a stored contract
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "removed-module";
+              if (field === "storedHash") return storedHash;
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(1);
+      expect(result.modifiedCount).toBe(0);
+      expect(result.addedCount).toBe(0);
+      expect(result.removedCount).toBe(1);
+      expect(result.changes).toHaveLength(1);
+      expect(result.changes[0]).toEqual({
+        moduleId: "removed-module",
+        fileName: "unknown",
+        filePath: "unknown",
+        currentHash: "",
+        storedHash,
+        status: "removed",
+      });
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should detect multiple changes at once", async () => {
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+
+      // Mock getAllContracts with 2 contracts: 1 modified, 1 added
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "modified-contract.yml",
+          filePath: "/contracts/modified-contract.yml",
+          fileHash: "newhash111",
+          content: {
+            id: "modified-module",
+            type: "service",
+            category: "backend",
+            description: "Modified module",
+          },
+        },
+        {
+          fileName: "added-contract.yml",
+          filePath: "/contracts/added-contract.yml",
+          fileHash: "newhash222",
+          content: {
+            id: "added-module",
+            type: "service",
+            category: "backend",
+            description: "Added module",
+          },
+        },
+      ]);
+
+      // Mock Neo4j query to return 2 stored contracts: 1 modified, 1 removed
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "modified-module";
+              if (field === "storedHash") return "oldhash111";
+              return null;
+            }),
+          },
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "removed-module";
+              if (field === "storedHash") return "oldhash333";
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(3);
+      expect(result.modifiedCount).toBe(1);
+      expect(result.addedCount).toBe(1);
+      expect(result.removedCount).toBe(1);
+      expect(result.changes).toHaveLength(3);
+
+      const modified = result.changes.find((c) => c.status === "modified");
+      const added = result.changes.find((c) => c.status === "added");
+      const removed = result.changes.find((c) => c.status === "removed");
+
+      expect(modified).toBeDefined();
+      expect(modified?.moduleId).toBe("modified-module");
+      expect(modified?.currentHash).toBe("newhash111");
+      expect(modified?.storedHash).toBe("oldhash111");
+
+      expect(added).toBeDefined();
+      expect(added?.moduleId).toBe("added-module");
+      expect(added?.storedHash).toBeNull();
+
+      expect(removed).toBeDefined();
+      expect(removed?.moduleId).toBe("removed-module");
+      expect(removed?.currentHash).toBe("");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j errors and throw", async () => {
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+
+      mockSession.run.mockRejectedValue(new Error("Neo4j connection failed"));
+
+      await expect(service.checkIfContractsModified()).rejects.toThrow(
+        "Failed to check contract modifications: Neo4j connection failed",
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should close session even if error occurs", async () => {
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+      jest
+        .spyOn(service, "getAllContracts")
+        .mockRejectedValue(new Error("Failed to read contracts"));
+
+      await expect(service.checkIfContractsModified()).rejects.toThrow();
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle empty Neo4j database (no stored contracts)", async () => {
+      const currentHash = "hash123";
+
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "contract.yml",
+          filePath: "/contracts/contract.yml",
+          fileHash: currentHash,
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module",
+          },
+        },
+      ]);
+
+      mockSession.run.mockResolvedValue({
+        records: [],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(1);
+      expect(result.addedCount).toBe(1);
+      expect(result.changes[0].status).toBe("added");
+    });
+
+    it("should handle empty contracts directory (no current contracts)", async () => {
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "old-module";
+              if (field === "storedHash") return "oldhash";
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.totalChanges).toBe(1);
+      expect(result.removedCount).toBe(1);
+      expect(result.changes[0].status).toBe("removed");
+    });
+
+    it("should correctly identify contracts with matching hashes among multiple contracts", async () => {
+      jest.spyOn(configService, "get").mockReturnValue("/contracts/*.yml");
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([
+        {
+          fileName: "contract1.yml",
+          filePath: "/contracts/contract1.yml",
+          fileHash: "hash1",
+          content: {
+            id: "module1",
+            type: "service",
+            category: "backend",
+            description: "Module 1",
+          },
+        },
+        {
+          fileName: "contract2.yml",
+          filePath: "/contracts/contract2.yml",
+          fileHash: "hash2",
+          content: {
+            id: "module2",
+            type: "service",
+            category: "backend",
+            description: "Module 2",
+          },
+        },
+      ]);
+
+      mockSession.run.mockResolvedValue({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "module1";
+              if (field === "storedHash") return "hash1";
+              return null;
+            }),
+          },
+          {
+            get: jest.fn((field: string) => {
+              if (field === "moduleId") return "module2";
+              if (field === "storedHash") return "hash2";
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.checkIfContractsModified();
+
+      expect(result.hasChanges).toBe(false);
+      expect(result.totalChanges).toBe(0);
+      expect(result.changes).toEqual([]);
+    });
+  });
 });
