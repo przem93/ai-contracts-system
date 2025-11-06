@@ -12,6 +12,12 @@ import {
   CheckModifiedResponseDto,
   ModifiedContractDto,
 } from "./dto/check-modified-response.dto";
+import {
+  ModuleRelationsResponseDto,
+  OutgoingDependencyDto,
+  IncomingDependencyDto,
+  DependencyPartDto,
+} from "./dto/module-relations-response.dto";
 
 @Injectable()
 export class ContractsService {
@@ -744,6 +750,98 @@ export class ContractsService {
     } catch (error) {
       this.logger.error("Error checking contract modifications:", error.message);
       throw new Error(`Failed to check contract modifications: ${error.message}`);
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Get relations for a specific module
+   * Returns outgoing dependencies (modules this module depends on)
+   * and incoming dependencies (modules that depend on this module)
+   * @param moduleId The module ID to get relations for
+   * @returns Object with module relations
+   */
+  async getModuleRelations(
+    moduleId: string,
+  ): Promise<ModuleRelationsResponseDto> {
+    const session = this.neo4jService.getSession();
+
+    try {
+      // Check if module exists
+      const moduleCheckResult = await session.run(
+        `
+        MATCH (m:Module {module_id: $moduleId})
+        RETURN m
+        `,
+        { moduleId },
+      );
+
+      if (moduleCheckResult.records.length === 0) {
+        throw new Error(`Module with id "${moduleId}" not found`);
+      }
+
+      // Query outgoing dependencies (modules this module depends on)
+      const outgoingResult = await session.run(
+        `
+        MATCH (m:Module {module_id: $moduleId})-[r:MODULE_DEPENDENCY]->(dep:Module)
+        RETURN dep.module_id AS module_id, r.parts AS parts
+        `,
+        { moduleId },
+      );
+
+      const outgoingDependencies: OutgoingDependencyDto[] =
+        outgoingResult.records.map((record) => {
+          const depModuleId = record.get("module_id");
+          const partsJson = record.get("parts");
+          const parts: DependencyPartDto[] = partsJson
+            ? JSON.parse(partsJson)
+            : [];
+
+          return {
+            module_id: depModuleId,
+            parts,
+          };
+        });
+
+      // Query incoming dependencies (modules that depend on this module)
+      const incomingResult = await session.run(
+        `
+        MATCH (dependent:Module)-[r:MODULE_DEPENDENCY]->(m:Module {module_id: $moduleId})
+        RETURN dependent.module_id AS module_id, r.parts AS parts
+        `,
+        { moduleId },
+      );
+
+      const incomingDependencies: IncomingDependencyDto[] =
+        incomingResult.records.map((record) => {
+          const depModuleId = record.get("module_id");
+          const partsJson = record.get("parts");
+          const parts: DependencyPartDto[] = partsJson
+            ? JSON.parse(partsJson)
+            : [];
+
+          return {
+            module_id: depModuleId,
+            parts,
+          };
+        });
+
+      this.logger.log(
+        `Retrieved relations for module "${moduleId}": ${outgoingDependencies.length} outgoing, ${incomingDependencies.length} incoming`,
+      );
+
+      return {
+        module_id: moduleId,
+        outgoing_dependencies: outgoingDependencies,
+        incoming_dependencies: incomingDependencies,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error getting module relations for "${moduleId}":`,
+        error.message,
+      );
+      throw error;
     } finally {
       await session.close();
     }

@@ -4,13 +4,16 @@ import {
   Post,
   BadRequestException,
   InternalServerErrorException,
+  Param,
+  NotFoundException,
 } from "@nestjs/common";
-import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiTags, ApiParam } from "@nestjs/swagger";
 import { ContractsService } from "./contracts.service";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { ValidationResponseDto } from "./dto/validation-response.dto";
 import { ApplyResponseDto } from "./dto/apply-response.dto";
 import { CheckModifiedResponseDto } from "./dto/check-modified-response.dto";
+import { ModuleRelationsResponseDto } from "./dto/module-relations-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -107,5 +110,38 @@ export class ContractsController {
 
     // Step 6: Return success result
     return applyResult;
+  }
+
+  @Get(":module_id/relations")
+  @ApiOperation({
+    summary: "Get relations for a specific module",
+    description:
+      "Returns outgoing dependencies (modules this module depends on) and incoming dependencies (modules that depend on this module) with the parts they use",
+  })
+  @ApiParam({
+    name: "module_id",
+    description: "The module ID to get relations for",
+    example: "users-service",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns module relations",
+    type: ModuleRelationsResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Module not found",
+  })
+  async getModuleRelations(
+    @Param("module_id") moduleId: string,
+  ): Promise<ModuleRelationsResponseDto> {
+    try {
+      return await this.contractsService.getModuleRelations(moduleId);
+    } catch (error) {
+      if (error.message.includes("not found")) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
   }
 }
