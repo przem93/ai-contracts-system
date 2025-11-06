@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import {
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
 } from "@nestjs/common";
 import { ContractsController } from "./contracts.controller";
 import { ContractsService } from "./contracts.service";
@@ -59,6 +60,7 @@ describe("ContractsController", () => {
             validateContracts: jest.fn(),
             applyContractsToNeo4j: jest.fn(),
             checkIfContractsModified: jest.fn(),
+            getModuleRelations: jest.fn(),
           },
         },
       ],
@@ -965,6 +967,233 @@ describe("ContractsController", () => {
       expect(modifiedChanges).toHaveLength(2);
       expect(addedChanges).toHaveLength(2);
       expect(removedChanges).toHaveLength(1);
+    });
+  });
+
+  describe("getModuleRelations", () => {
+    it("should return module relations for a valid module", async () => {
+      const mockRelations = {
+        module_id: "users-service",
+        outgoing_dependencies: [
+          {
+            module_id: "auth-service",
+            parts: [
+              { part_id: "authenticate", type: "function" },
+              { part_id: "validateToken", type: "function" },
+            ],
+          },
+        ],
+        incoming_dependencies: [
+          {
+            module_id: "users-controller",
+            parts: [
+              { part_id: "findUser", type: "function" },
+              { part_id: "listUsers", type: "function" },
+            ],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("users-service");
+
+      expect(result).toEqual(mockRelations);
+      expect(service.getModuleRelations).toHaveBeenCalledWith("users-service");
+    });
+
+    it("should return module relations with no dependencies", async () => {
+      const mockRelations = {
+        module_id: "standalone-module",
+        outgoing_dependencies: [],
+        incoming_dependencies: [],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("standalone-module");
+
+      expect(result).toEqual(mockRelations);
+      expect(result.outgoing_dependencies).toHaveLength(0);
+      expect(result.incoming_dependencies).toHaveLength(0);
+    });
+
+    it("should return module relations with only outgoing dependencies", async () => {
+      const mockRelations = {
+        module_id: "users-controller",
+        outgoing_dependencies: [
+          {
+            module_id: "users-service",
+            parts: [{ part_id: "findUser", type: "function" }],
+          },
+          {
+            module_id: "auth-service",
+            parts: [{ part_id: "checkPermission", type: "function" }],
+          },
+        ],
+        incoming_dependencies: [],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("users-controller");
+
+      expect(result).toEqual(mockRelations);
+      expect(result.outgoing_dependencies).toHaveLength(2);
+      expect(result.incoming_dependencies).toHaveLength(0);
+    });
+
+    it("should return module relations with only incoming dependencies", async () => {
+      const mockRelations = {
+        module_id: "auth-service",
+        outgoing_dependencies: [],
+        incoming_dependencies: [
+          {
+            module_id: "users-service",
+            parts: [{ part_id: "authenticate", type: "function" }],
+          },
+          {
+            module_id: "orders-service",
+            parts: [{ part_id: "validateToken", type: "function" }],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("auth-service");
+
+      expect(result).toEqual(mockRelations);
+      expect(result.outgoing_dependencies).toHaveLength(0);
+      expect(result.incoming_dependencies).toHaveLength(2);
+    });
+
+    it("should throw NotFoundException when module does not exist", async () => {
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockRejectedValue(
+          new Error('Module with id "non-existent-module" not found'),
+        );
+
+      await expect(
+        controller.getModuleRelations("non-existent-module"),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(service.getModuleRelations).toHaveBeenCalledWith(
+        "non-existent-module",
+      );
+    });
+
+    it("should include correct module_id in the response", async () => {
+      const mockRelations = {
+        module_id: "test-module",
+        outgoing_dependencies: [],
+        incoming_dependencies: [],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("test-module");
+
+      expect(result.module_id).toBe("test-module");
+    });
+
+    it("should propagate service errors that are not 'not found'", async () => {
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockRejectedValue(new Error("Database connection failed"));
+
+      await expect(
+        controller.getModuleRelations("users-service"),
+      ).rejects.toThrow("Database connection failed");
+    });
+
+    it("should handle module with multiple outgoing dependencies and parts", async () => {
+      const mockRelations = {
+        module_id: "complex-module",
+        outgoing_dependencies: [
+          {
+            module_id: "dep1",
+            parts: [
+              { part_id: "func1", type: "function" },
+              { part_id: "func2", type: "function" },
+              { part_id: "class1", type: "class" },
+            ],
+          },
+          {
+            module_id: "dep2",
+            parts: [{ part_id: "interface1", type: "interface" }],
+          },
+        ],
+        incoming_dependencies: [
+          {
+            module_id: "dependent1",
+            parts: [
+              { part_id: "export1", type: "function" },
+              { part_id: "export2", type: "class" },
+            ],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("complex-module");
+
+      expect(result).toEqual(mockRelations);
+      expect(result.outgoing_dependencies[0].parts).toHaveLength(3);
+      expect(result.outgoing_dependencies[1].parts).toHaveLength(1);
+      expect(result.incoming_dependencies[0].parts).toHaveLength(2);
+    });
+
+    it("should verify parts structure in dependencies", async () => {
+      const mockRelations = {
+        module_id: "users-service",
+        outgoing_dependencies: [
+          {
+            module_id: "auth-service",
+            parts: [{ part_id: "authenticate", type: "function" }],
+          },
+        ],
+        incoming_dependencies: [
+          {
+            module_id: "users-controller",
+            parts: [{ part_id: "findUser", type: "function" }],
+          },
+        ],
+      };
+
+      jest
+        .spyOn(service, "getModuleRelations")
+        .mockResolvedValue(mockRelations);
+
+      const result = await controller.getModuleRelations("users-service");
+
+      // Verify outgoing dependency parts structure
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("type");
+      expect(result.outgoing_dependencies[0].parts[0].part_id).toBe(
+        "authenticate",
+      );
+      expect(result.outgoing_dependencies[0].parts[0].type).toBe("function");
+
+      // Verify incoming dependency parts structure
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("type");
+      expect(result.incoming_dependencies[0].parts[0].part_id).toBe("findUser");
+      expect(result.incoming_dependencies[0].parts[0].type).toBe("function");
     });
   });
 });

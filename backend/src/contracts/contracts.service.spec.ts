@@ -2090,4 +2090,442 @@ describe("ContractsService", () => {
       expect(result.changes).toEqual([]);
     });
   });
+
+  describe("getModuleRelations", () => {
+    beforeEach(() => {
+      mockSession.run.mockClear();
+      mockSession.close.mockClear();
+      jest.spyOn(neo4jService, "getSession").mockReturnValue(mockSession);
+    });
+
+    it("should return module relations with outgoing and incoming dependencies", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies query
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "auth-service";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "authenticate", type: "function" },
+                  { part_id: "validateToken", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      // Mock incoming dependencies query
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "users-controller";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "findUser", type: "function" },
+                  { part_id: "listUsers", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.getModuleRelations("users-service");
+
+      expect(result).toBeDefined();
+      expect(result.module_id).toBe("users-service");
+      expect(result.outgoing_dependencies).toHaveLength(1);
+      expect(result.incoming_dependencies).toHaveLength(1);
+
+      // Verify outgoing dependency
+      expect(result.outgoing_dependencies[0].module_id).toBe("auth-service");
+      expect(result.outgoing_dependencies[0].parts).toHaveLength(2);
+      expect(result.outgoing_dependencies[0].parts[0].part_id).toBe(
+        "authenticate",
+      );
+
+      // Verify incoming dependency
+      expect(result.incoming_dependencies[0].module_id).toBe("users-controller");
+      expect(result.incoming_dependencies[0].parts).toHaveLength(2);
+      expect(result.incoming_dependencies[0].parts[0].part_id).toBe("findUser");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should return module relations with no dependencies", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock empty outgoing dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      // Mock empty incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      const result = await service.getModuleRelations("standalone-module");
+
+      expect(result).toBeDefined();
+      expect(result.module_id).toBe("standalone-module");
+      expect(result.outgoing_dependencies).toHaveLength(0);
+      expect(result.incoming_dependencies).toHaveLength(0);
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should return module relations with only outgoing dependencies", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "dep1";
+              if (field === "parts")
+                return JSON.stringify([{ part_id: "func1", type: "function" }]);
+              return null;
+            }),
+          },
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "dep2";
+              if (field === "parts")
+                return JSON.stringify([{ part_id: "func2", type: "function" }]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      // Mock empty incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      const result = await service.getModuleRelations("users-controller");
+
+      expect(result).toBeDefined();
+      expect(result.module_id).toBe("users-controller");
+      expect(result.outgoing_dependencies).toHaveLength(2);
+      expect(result.incoming_dependencies).toHaveLength(0);
+
+      expect(result.outgoing_dependencies[0].module_id).toBe("dep1");
+      expect(result.outgoing_dependencies[1].module_id).toBe("dep2");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should return module relations with only incoming dependencies", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock empty outgoing dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      // Mock incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "users-service";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "authenticate", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "orders-service";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "validateToken", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.getModuleRelations("auth-service");
+
+      expect(result).toBeDefined();
+      expect(result.module_id).toBe("auth-service");
+      expect(result.outgoing_dependencies).toHaveLength(0);
+      expect(result.incoming_dependencies).toHaveLength(2);
+
+      expect(result.incoming_dependencies[0].module_id).toBe("users-service");
+      expect(result.incoming_dependencies[1].module_id).toBe("orders-service");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should throw error when module does not exist", async () => {
+      // Mock module not found
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      await expect(
+        service.getModuleRelations("non-existent-module"),
+      ).rejects.toThrow('Module with id "non-existent-module" not found');
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j errors during module check", async () => {
+      mockSession.run.mockRejectedValueOnce(new Error("Neo4j connection failed"));
+
+      await expect(
+        service.getModuleRelations("users-service"),
+      ).rejects.toThrow("Neo4j connection failed");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j errors during outgoing dependencies query", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock error on outgoing dependencies query
+      mockSession.run.mockRejectedValueOnce(new Error("Query failed"));
+
+      await expect(
+        service.getModuleRelations("users-service"),
+      ).rejects.toThrow("Query failed");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j errors during incoming dependencies query", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock successful outgoing dependencies query
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      // Mock error on incoming dependencies query
+      mockSession.run.mockRejectedValueOnce(new Error("Query failed"));
+
+      await expect(
+        service.getModuleRelations("users-service"),
+      ).rejects.toThrow("Query failed");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should close session even when error occurs", async () => {
+      mockSession.run.mockRejectedValueOnce(
+        new Error("Database connection error"),
+      );
+
+      await expect(
+        service.getModuleRelations("users-service"),
+      ).rejects.toThrow("Database connection error");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle multiple parts in dependencies", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies with multiple parts
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "complex-dep";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "func1", type: "function" },
+                  { part_id: "func2", type: "function" },
+                  { part_id: "class1", type: "class" },
+                  { part_id: "interface1", type: "interface" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      // Mock incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      const result = await service.getModuleRelations("test-module");
+
+      expect(result.outgoing_dependencies[0].parts).toHaveLength(4);
+      expect(result.outgoing_dependencies[0].parts[0].part_id).toBe("func1");
+      expect(result.outgoing_dependencies[0].parts[1].part_id).toBe("func2");
+      expect(result.outgoing_dependencies[0].parts[2].part_id).toBe("class1");
+      expect(result.outgoing_dependencies[0].parts[3].part_id).toBe(
+        "interface1",
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should correctly parse parts JSON from Neo4j", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "dep1";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "testFunc", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      // Mock incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "dependent1";
+              if (field === "parts")
+                return JSON.stringify([
+                  { part_id: "exportFunc", type: "function" },
+                ]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      const result = await service.getModuleRelations("test-module");
+
+      // Verify outgoing parts structure
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("type");
+      expect(result.outgoing_dependencies[0].parts[0].part_id).toBe("testFunc");
+      expect(result.outgoing_dependencies[0].parts[0].type).toBe("function");
+
+      // Verify incoming parts structure
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("type");
+      expect(result.incoming_dependencies[0].parts[0].part_id).toBe("exportFunc");
+      expect(result.incoming_dependencies[0].parts[0].type).toBe("function");
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle dependencies with no parts (empty array)", async () => {
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies with empty parts
+      mockSession.run.mockResolvedValueOnce({
+        records: [
+          {
+            get: jest.fn((field: string) => {
+              if (field === "module_id") return "dep1";
+              if (field === "parts") return JSON.stringify([]);
+              return null;
+            }),
+          },
+        ],
+      });
+
+      // Mock incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      const result = await service.getModuleRelations("test-module");
+
+      expect(result.outgoing_dependencies[0].parts).toHaveLength(0);
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should verify module_id is passed correctly to Neo4j queries", async () => {
+      const testModuleId = "specific-module-id";
+
+      // Mock module exists check
+      mockSession.run.mockResolvedValueOnce({
+        records: [{ get: jest.fn() }],
+      });
+
+      // Mock outgoing dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      // Mock incoming dependencies
+      mockSession.run.mockResolvedValueOnce({
+        records: [],
+      });
+
+      await service.getModuleRelations(testModuleId);
+
+      // Verify module check query
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MATCH (m:Module {module_id: $moduleId})"),
+        expect.objectContaining({ moduleId: testModuleId }),
+      );
+
+      // Verify outgoing dependencies query
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "MATCH (m:Module {module_id: $moduleId})-[r:MODULE_DEPENDENCY]->(dep:Module)",
+        ),
+        expect.objectContaining({ moduleId: testModuleId }),
+      );
+
+      // Verify incoming dependencies query
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "MATCH (dependent:Module)-[r:MODULE_DEPENDENCY]->(m:Module {module_id: $moduleId})",
+        ),
+        expect.objectContaining({ moduleId: testModuleId }),
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+  });
 });
