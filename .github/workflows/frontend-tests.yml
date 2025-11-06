@@ -47,15 +47,15 @@ jobs:
       
       - name: Start preview server
         run: |
-          npm run preview &
+          npx vite preview --port 4173 --host 0.0.0.0 &
           echo "PREVIEW_PID=$!" >> $GITHUB_ENV
           # Wait for server to be ready
-          timeout 30 sh -c 'until curl -s http://localhost > /dev/null; do sleep 1; done' || exit 1
+          timeout 30 sh -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done' || exit 1
       
       - name: Run Playwright tests
         env:
           CI: true
-          PLAYWRIGHT_BASE_URL: http://localhost
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
         run: npm run test:e2e
       
       - name: Upload test results
