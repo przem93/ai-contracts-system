@@ -244,7 +244,7 @@ export const getContractsControllerCheckIfContractsModifiedQueryKey = () => {
     }
 
     
-export const getContractsControllerCheckIfContractsModifiedQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
+export const getContractsControllerCheckIfContractsModifiedQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -263,10 +263,10 @@ const {query: queryOptions} = options ?? {};
 }
 
 export type ContractsControllerCheckIfContractsModifiedQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>>
-export type ContractsControllerCheckIfContractsModifiedQueryError = unknown
+export type ContractsControllerCheckIfContractsModifiedQueryError = void
 
 
-export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = void>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>,
@@ -276,7 +276,7 @@ export function useContractsControllerCheckIfContractsModified<TData = Awaited<R
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = void>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>,
@@ -286,7 +286,7 @@ export function useContractsControllerCheckIfContractsModified<TData = Awaited<R
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = void>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -294,10 +294,10 @@ export function useContractsControllerCheckIfContractsModified<TData = Awaited<R
  * @summary Check if contract files have been modified
  */
 
-export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = unknown>(
+export function useContractsControllerCheckIfContractsModified<TData = Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError = void>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerCheckIfContractsModified>>, TError, TData>>, }
  , queryClient?: QueryClient 
-):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getContractsControllerCheckIfContractsModifiedQueryOptions(options)
 

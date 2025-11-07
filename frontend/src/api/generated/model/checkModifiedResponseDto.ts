@@ -8,16 +8,16 @@
 import type { ModifiedContractDto } from './modifiedContractDto';
 
 export interface CheckModifiedResponseDto {
-  /** Number of newly added contracts */
-  addedCount: number;
-  /** List of contracts that have been modified, added, or removed */
-  changes: ModifiedContractDto[];
   /** Whether any contracts have been modified, added, or removed */
   hasChanges: boolean;
-  /** Number of modified contracts */
-  modifiedCount: number;
-  /** Number of removed contracts */
-  removedCount: number;
   /** Total number of contracts that have changed */
   totalChanges: number;
+  /** Number of modified contracts */
+  modifiedCount: number;
+  /** Number of newly added contracts */
+  addedCount: number;
+  /** Number of removed contracts */
+  removedCount: number;
+  /** List of contracts that have been modified, added, or removed */
+  changes: ModifiedContractDto[];
 }

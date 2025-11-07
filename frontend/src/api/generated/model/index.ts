@@ -11,6 +11,7 @@ export * from './checkModifiedResponseDto';
 export * from './contractFileDto';
 export * from './contractFileDtoContent';
 export * from './modifiedContractDto';
+export * from './modifiedContractDtoStatus';
 export * from './validationErrorDto';
 export * from './validationFileDto';
 export * from './validationResponseDto';
