@@ -66,7 +66,7 @@ function ApplyChangesPage() {
               <CardContent>
                 <Stack spacing={3}>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <CheckCircleIcon color="success" sx={{ fontSize: 60 }} />
+                    <CheckCircleIcon color="success" sx={{ fontSize: 60 }} data-testid="CheckCircleIcon" />
                     <Box>
                       <Typography variant="h5" gutterBottom>
                         Changes Applied Successfully!
@@ -111,7 +111,7 @@ function ApplyChangesPage() {
               <CardContent>
                 <Stack spacing={3}>
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <ErrorIcon color="error" sx={{ fontSize: 60 }} />
+                    <ErrorIcon color="error" sx={{ fontSize: 60 }} data-testid="ErrorIcon" />
                     <Box>
                       <Typography variant="h5" gutterBottom>
                         Failed to Apply Changes

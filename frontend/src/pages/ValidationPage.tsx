@@ -65,7 +65,7 @@ function ValidationPage() {
                   <Stack direction="row" spacing={2} alignItems="center">
                     {data.valid ? (
                       <>
-                        <CheckCircleIcon color="success" sx={{ fontSize: 40 }} />
+                        <CheckCircleIcon color="success" sx={{ fontSize: 40 }} data-testid="CheckCircleIcon" />
                         <Box>
                           <Typography variant="h6">All Contracts Valid</Typography>
                           <Typography variant="body2" color="text.secondary">
@@ -75,7 +75,7 @@ function ValidationPage() {
                       </>
                     ) : (
                       <>
-                        <ErrorIcon color="error" sx={{ fontSize: 40 }} />
+                        <ErrorIcon color="error" sx={{ fontSize: 40 }} data-testid="ErrorIcon" />
                         <Box>
                           <Typography variant="h6">Validation Errors Found</Typography>
                           <Typography variant="body2" color="text.secondary">
@@ -105,9 +105,9 @@ function ValidationPage() {
                         <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             {file.valid ? (
-                              <CheckCircleIcon color="success" />
+                              <CheckCircleIcon color="success" data-testid="CheckCircleIcon" />
                             ) : (
-                              <ErrorIcon color="error" />
+                              <ErrorIcon color="error" data-testid="ErrorIcon" />
                             )}
                             <Typography variant="h6">
                               {file.fileName}
