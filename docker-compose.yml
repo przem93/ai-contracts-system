@@ -95,16 +95,7 @@ services:
       - PLAYWRIGHT_BASE_URL=http://frontend
     volumes:
       # Mount source code and test files
-      - ./frontend/src:/app/src:rw
-      - ./frontend/tests:/app/tests:rw
-      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
-      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json:ro
-      - ./frontend/playwright.config.ts:/app/playwright.config.ts:ro
-      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
-      - ./frontend/index.html:/app/index.html:ro
-      # Mount directory for test results and reports
-      - ./frontend/playwright-report:/app/playwright-report:rw
-      - ./frontend/test-results:/app/test-results:rw
+      - ./frontend:/usr/src/app
     command: 
       - /bin/sh
       - -c
