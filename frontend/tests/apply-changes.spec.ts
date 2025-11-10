@@ -249,7 +249,7 @@ test.describe('Apply Changes Page', () => {
       }
       
       attemptCount++;
-      if (attemptCount === 2) {
+      if (attemptCount === 1) {
         // First attempt: simulate network/server error by aborting
         await route.abort('failed');
       } else {
@@ -280,8 +280,8 @@ test.describe('Apply Changes Page', () => {
     const isSuccessful = await applyChangesPage.isApplySuccessful();
     expect(isSuccessful).toBe(true);
 
-    // Verify we made 2 attempts
-    expect(attemptCount).toBe(3);
+    // Verify we made 2 attempts (1 failed + 1 succeeded)
+    expect(attemptCount).toBe(2);
   });
 
   test('should handle validation failed error (400)', async ({ page }) => {
