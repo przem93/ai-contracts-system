@@ -528,118 +528,133 @@ export class ContractsService {
     const session = this.neo4jService.getSession();
 
     try {
-      // Clear all existing data from the database (reset)
-      this.logger.log("Clearing all existing data from Neo4j database...");
-      await session.run("MATCH (n) DETACH DELETE n");
-      this.logger.log("✓ Database cleared successfully");
+      // Ensure uniqueness constraint exists on Module.module_id
+      await session.run(`
+        CREATE CONSTRAINT module_id_unique IF NOT EXISTS
+        FOR (m:Module) REQUIRE m.module_id IS UNIQUE
+      `);
 
-      this.logger.log(
-        `Starting to apply ${contractFiles.length} contracts to Neo4j`,
-      );
+      // Execute all operations in a single write transaction for atomicity
+      const result = await session.executeWrite(async (tx) => {
+        // Clear all existing data from the database (reset)
+        this.logger.log("Clearing all existing data from Neo4j database...");
+        await tx.run("MATCH (n) DETACH DELETE n");
+        this.logger.log("✓ Database cleared successfully");
 
-      let totalModulesProcessed = 0;
-      let totalPartsProcessed = 0;
-
-      // Process each contract
-      for (const contractFile of contractFiles) {
-        const contract = contractFile.content;
-        
-        // Create or merge Module node with file hash
-        await session.run(
-          `
-          MERGE (m:Module {module_id: $module_id})
-          SET m.type = $type,
-              m.description = $description,
-              m.category = $category,
-              m.contractFileHash = $contractFileHash
-          RETURN m
-          `,
-          {
-            module_id: contract.id,
-            type: contract.type,
-            description: contract.description,
-            category: contract.category,
-            contractFileHash: contractFile.fileHash,
-          },
+        this.logger.log(
+          `Starting to apply ${contractFiles.length} contracts to Neo4j`,
         );
 
-        totalModulesProcessed++;
-        this.logger.log(`Created/updated module: ${contract.id}`);
+        let totalModulesProcessed = 0;
+        let totalPartsProcessed = 0;
 
-        // Process parts if they exist
-        if (contract.parts && contract.parts.length > 0) {
-          for (const part of contract.parts) {
-            // Create or merge Part node
-            await session.run(
-              `
-              MERGE (p:Part {part_id: $part_id, module_id: $module_id})
-              SET p.type = $type
-              RETURN p
-              `,
-              {
-                part_id: part.id,
-                module_id: contract.id,
-                type: part.type,
-              },
+        // Process each contract
+        for (const contractFile of contractFiles) {
+          const contract = contractFile.content;
+          
+          // Create or merge Module node with file hash
+          await tx.run(
+            `
+            MERGE (m:Module {module_id: $module_id})
+            SET m.type = $type,
+                m.description = $description,
+                m.category = $category,
+                m.contractFileHash = $contractFileHash
+            RETURN m
+            `,
+            {
+              module_id: contract.id,
+              type: contract.type,
+              description: contract.description,
+              category: contract.category,
+              contractFileHash: contractFile.fileHash,
+            },
+          );
+
+          totalModulesProcessed++;
+          this.logger.log(`Created/updated module: ${contract.id}`);
+
+          // Process parts if they exist
+          if (contract.parts && contract.parts.length > 0) {
+            for (const part of contract.parts) {
+              // Create or merge Part node
+              await tx.run(
+                `
+                MERGE (p:Part {part_id: $part_id, module_id: $module_id})
+                SET p.type = $type
+                RETURN p
+                `,
+                {
+                  part_id: part.id,
+                  module_id: contract.id,
+                  type: part.type,
+                },
+              );
+
+              // Create MODULE_PART relationship
+              await tx.run(
+                `
+                MATCH (m:Module {module_id: $module_id})
+                MATCH (p:Part {part_id: $part_id, module_id: $module_id})
+                MERGE (m)-[r:MODULE_PART]->(p)
+                RETURN r
+                `,
+                {
+                  module_id: contract.id,
+                  part_id: part.id,
+                },
+              );
+
+              totalPartsProcessed++;
+            }
+
+            this.logger.log(
+              `Created/updated ${contract.parts.length} parts for module: ${contract.id}`,
             );
-
-            // Create MODULE_PART relationship
-            await session.run(
-              `
-              MATCH (m:Module {module_id: $module_id})
-              MATCH (p:Part {part_id: $part_id, module_id: $module_id})
-              MERGE (m)-[r:MODULE_PART]->(p)
-              RETURN r
-              `,
-              {
-                module_id: contract.id,
-                part_id: part.id,
-              },
-            );
-
-            totalPartsProcessed++;
           }
 
-          this.logger.log(
-            `Created/updated ${contract.parts.length} parts for module: ${contract.id}`,
-          );
-        }
+          // Process dependencies if they exist
+          if (contract.dependencies && contract.dependencies.length > 0) {
+            for (const dependency of contract.dependencies) {
+              // Create MODULE_DEPENDENCY relationship with properties
+              // Note: Removed redundant module_id property from relationship pattern
+              await tx.run(
+                `
+                MATCH (m:Module {module_id: $from_module_id})
+                MATCH (d:Module {module_id: $to_module_id})
+                MERGE (m)-[r:MODULE_DEPENDENCY]->(d)
+                SET r.parts = $parts
+                RETURN r
+                `,
+                {
+                  from_module_id: contract.id,
+                  to_module_id: dependency.module_id,
+                  parts: JSON.stringify(dependency.parts),
+                },
+              );
+            }
 
-        // Process dependencies if they exist
-        if (contract.dependencies && contract.dependencies.length > 0) {
-          for (const dependency of contract.dependencies) {
-            // Create MODULE_DEPENDENCY relationship with properties
-            await session.run(
-              `
-              MATCH (m:Module {module_id: $from_module_id})
-              MATCH (d:Module {module_id: $to_module_id})
-              MERGE (m)-[r:MODULE_DEPENDENCY {module_id: $to_module_id}]->(d)
-              SET r.parts = $parts
-              RETURN r
-              `,
-              {
-                from_module_id: contract.id,
-                to_module_id: dependency.module_id,
-                parts: JSON.stringify(dependency.parts),
-              },
+            this.logger.log(
+              `Created/updated ${contract.dependencies.length} dependencies for module: ${contract.id}`,
             );
           }
-
-          this.logger.log(
-            `Created/updated ${contract.dependencies.length} dependencies for module: ${contract.id}`,
-          );
         }
-      }
 
-      this.logger.log(
-        `Successfully applied ${totalModulesProcessed} modules and ${totalPartsProcessed} parts to Neo4j`,
-      );
+        this.logger.log(
+          `Successfully applied ${totalModulesProcessed} modules and ${totalPartsProcessed} parts to Neo4j`,
+        );
+
+        return {
+          totalModulesProcessed,
+          totalPartsProcessed,
+        };
+      });
 
       return {
         success: true,
-        modulesProcessed: totalModulesProcessed,
-        partsProcessed: totalPartsProcessed,
-        message: `Successfully applied ${totalModulesProcessed} modules and ${totalPartsProcessed} parts to Neo4j`,
+        modulesProcessed: result.totalModulesProcessed,
+        partsProcessed: result.totalPartsProcessed,
+        message: `Successfully applied ${result.totalModulesProcessed} modules and ${result.totalPartsProcessed} parts to Neo4j`,
       };
     } catch (error) {
       this.logger.error("Error applying contracts to Neo4j:", error.message);

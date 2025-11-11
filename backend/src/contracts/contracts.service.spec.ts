@@ -14,10 +14,23 @@ describe("ContractsService", () => {
   let mockSession: any;
 
   beforeEach(async () => {
-    // Create mock session
+    // Create a shared mock function for run operations
+    const sharedRunMock = jest.fn().mockResolvedValue({ records: [] });
+    
+    // Create mock transaction that uses the shared run mock
+    const mockTransaction = {
+      run: sharedRunMock,
+    };
+
+    // Create mock session that also uses the shared run mock
     mockSession = {
-      run: jest.fn().mockResolvedValue({ records: [] }),
+      run: sharedRunMock,
       close: jest.fn().mockResolvedValue(undefined),
+      executeWrite: jest.fn().mockImplementation(async (fn) => {
+        // Execute the transaction function with the mock transaction
+        return await fn(mockTransaction);
+      }),
+      _mockTransaction: mockTransaction,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -1114,13 +1127,19 @@ describe("ContractsService", () => {
 
       await service.applyContractsToNeo4j(contractFiles);
 
-      // Verify database clearing is the FIRST operation
-      expect(mockSession.run.mock.calls[0][0]).toBe(
-        "MATCH (n) DETACH DELETE n",
+      // Verify constraint creation is called first
+      expect(mockSession.run.mock.calls[0][0]).toContain(
+        "CREATE CONSTRAINT module_id_unique",
       );
 
-      // Verify module creation happens AFTER clearing
-      expect(mockSession.run.mock.calls[1][0]).toContain(
+      // Verify executeWrite is called to run operations in a transaction
+      expect(mockSession.executeWrite).toHaveBeenCalled();
+
+      // Verify database clearing happens inside transaction (second operation)
+      expect(mockSession.run.mock.calls[1][0]).toContain("MATCH (n) DETACH DELETE n");
+
+      // Verify module creation happens AFTER clearing (third operation)
+      expect(mockSession.run.mock.calls[2][0]).toContain(
         "MERGE (m:Module {module_id: $module_id})",
       );
     });
@@ -1194,15 +1213,21 @@ describe("ContractsService", () => {
         }),
       );
 
-      // Verify MODULE_DEPENDENCY relationship was called
+      // Verify MODULE_DEPENDENCY relationship was called (without redundant module_id in pattern)
       expect(mockSession.run).toHaveBeenCalledWith(
-        expect.stringContaining("MERGE (m)-[r:MODULE_DEPENDENCY"),
+        expect.stringContaining("MERGE (m)-[r:MODULE_DEPENDENCY]->(d)"),
         expect.objectContaining({
           from_module_id: "users-get",
           to_module_id: "users-service",
           parts: expect.any(String),
         }),
       );
+      
+      // Ensure the redundant module_id property is NOT in the relationship pattern
+      const dependencyCall = mockSession.run.mock.calls.find(call => 
+        call[0] && call[0].includes("MODULE_DEPENDENCY")
+      );
+      expect(dependencyCall[0]).not.toContain("MODULE_DEPENDENCY {module_id:");
 
       // Verify session was closed
       expect(mockSession.close).toHaveBeenCalled();
