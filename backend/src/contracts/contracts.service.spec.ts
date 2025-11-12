@@ -1127,18 +1127,18 @@ describe("ContractsService", () => {
 
       await service.applyContractsToNeo4j(contractFiles);
 
-      // Verify constraint creation is called first
-      expect(mockSession.run.mock.calls[0][0]).toContain(
+      // Verify database clearing happens FIRST (before constraint creation)
+      expect(mockSession.run.mock.calls[0][0]).toContain("MATCH (n) DETACH DELETE n");
+
+      // Verify constraint creation is called SECOND (after clearing removes duplicates)
+      expect(mockSession.run.mock.calls[1][0]).toContain(
         "CREATE CONSTRAINT module_id_unique",
       );
 
-      // Verify executeWrite is called to run operations in a transaction
+      // Verify executeWrite is called to run data operations in a transaction
       expect(mockSession.executeWrite).toHaveBeenCalled();
 
-      // Verify database clearing happens inside transaction (second operation)
-      expect(mockSession.run.mock.calls[1][0]).toContain("MATCH (n) DETACH DELETE n");
-
-      // Verify module creation happens AFTER clearing (third operation)
+      // Verify module creation happens inside transaction (third operation)
       expect(mockSession.run.mock.calls[2][0]).toContain(
         "MERGE (m:Module {module_id: $module_id})",
       );

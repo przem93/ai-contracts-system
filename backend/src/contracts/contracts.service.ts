@@ -528,18 +528,21 @@ export class ContractsService {
     const session = this.neo4jService.getSession();
 
     try {
-      // Ensure uniqueness constraint exists on Module.module_id
+      // Clear all existing data from the database FIRST (before constraint creation)
+      // This ensures any existing duplicates are removed
+      this.logger.log("Clearing all existing data from Neo4j database...");
+      await session.run("MATCH (n) DETACH DELETE n");
+      this.logger.log("✓ Database cleared successfully");
+
+      // Now create uniqueness constraint (will succeed since no duplicates exist)
       await session.run(`
         CREATE CONSTRAINT module_id_unique IF NOT EXISTS
         FOR (m:Module) REQUIRE m.module_id IS UNIQUE
       `);
+      this.logger.log("✓ Uniqueness constraint ensured");
 
-      // Execute all operations in a single write transaction for atomicity
+      // Execute all data operations in a single write transaction for atomicity
       const result = await session.executeWrite(async (tx) => {
-        // Clear all existing data from the database (reset)
-        this.logger.log("Clearing all existing data from Neo4j database...");
-        await tx.run("MATCH (n) DETACH DELETE n");
-        this.logger.log("✓ Database cleared successfully");
 
         this.logger.log(
           `Starting to apply ${contractFiles.length} contracts to Neo4j`,
