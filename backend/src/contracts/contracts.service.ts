@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as fs from "fs";
 import * as path from "path";
@@ -8,6 +8,7 @@ import { glob } from "glob";
 import { ContractSchema, Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { Neo4jService } from "../neo4j/neo4j.service";
+import { EmbeddingService } from "./embedding.service";
 import {
   CheckModifiedResponseDto,
   ModifiedContractDto,
@@ -20,13 +21,31 @@ import {
 } from "./dto/module-relations-response.dto";
 
 @Injectable()
-export class ContractsService {
+export class ContractsService implements OnModuleInit {
   private readonly logger = new Logger(ContractsService.name);
 
   constructor(
     private configService: ConfigService,
     private neo4jService: Neo4jService,
+    private embeddingService: EmbeddingService,
   ) {}
+
+  async onModuleInit() {
+    // Initialize the embedding service when the module starts
+    try {
+      await this.embeddingService.initialize();
+      this.logger.log("✅ Embedding service initialized successfully");
+    } catch (error) {
+      this.logger.error(
+        "Failed to initialize embedding service:",
+        error.message,
+      );
+      // Don't throw - allow the service to start even if embeddings fail
+      this.logger.warn(
+        "⚠️ Service will continue without embedding functionality",
+      );
+    }
+  }
 
   async getAllContracts(): Promise<ContractFileDto[]> {
     const contractsPath = this.configService.get<string>("CONTRACTS_PATH");
@@ -555,14 +574,34 @@ export class ContractsService {
         for (const contractFile of contractFiles) {
           const contract = contractFile.content;
           
-          // Create or merge Module node with file hash
+          // Generate embedding for the description if embedding service is ready
+          let embedding: number[] | null = null;
+          if (this.embeddingService.isReady()) {
+            try {
+              embedding = await this.embeddingService.generateEmbedding(
+                contract.description,
+              );
+              this.logger.log(
+                `Generated embedding for module: ${contract.id} (${embedding.length} dimensions)`,
+              );
+            } catch (error) {
+              this.logger.error(
+                `Failed to generate embedding for module ${contract.id}:`,
+                error.message,
+              );
+              // Continue without embedding
+            }
+          }
+
+          // Create or merge Module node with file hash and embedding
           await tx.run(
             `
             MERGE (m:Module {module_id: $module_id})
             SET m.type = $type,
                 m.description = $description,
                 m.category = $category,
-                m.contractFileHash = $contractFileHash
+                m.contractFileHash = $contractFileHash,
+                m.embedding = $embedding
             RETURN m
             `,
             {
@@ -571,6 +610,7 @@ export class ContractsService {
               description: contract.description,
               category: contract.category,
               contractFileHash: contractFile.fileHash,
+              embedding: embedding,
             },
           );
 
