@@ -1,3 +1,11 @@
+// Mock @xenova/transformers module
+jest.mock("@xenova/transformers", () => ({
+  pipeline: jest.fn(),
+  env: {
+    allowLocalModels: false,
+  },
+}));
+
 import { Test, TestingModule } from "@nestjs/testing";
 import {
   BadRequestException,
