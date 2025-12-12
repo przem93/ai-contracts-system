@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { ContractsService } from "./contracts.service";
+import { EmbeddingService } from "./embedding.service";
 import { Neo4jService } from "../neo4j/neo4j.service";
 import { Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
@@ -11,6 +12,7 @@ describe("ContractsService", () => {
   let service: ContractsService;
   let configService: ConfigService;
   let neo4jService: Neo4jService;
+  let embeddingService: EmbeddingService;
   let mockSession: any;
 
   beforeEach(async () => {
@@ -49,6 +51,14 @@ describe("ContractsService", () => {
             getDriver: jest.fn(),
           },
         },
+        {
+          provide: EmbeddingService,
+          useValue: {
+            initialize: jest.fn().mockResolvedValue(undefined),
+            isReady: jest.fn().mockReturnValue(false),
+            generateEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+          },
+        },
       ],
     })
       .setLogger({
@@ -63,6 +73,7 @@ describe("ContractsService", () => {
     service = module.get<ContractsService>(ContractsService);
     configService = module.get<ConfigService>(ConfigService);
     neo4jService = module.get<Neo4jService>(Neo4jService);
+    embeddingService = module.get<EmbeddingService>(EmbeddingService);
   });
 
   it("should be defined", () => {
