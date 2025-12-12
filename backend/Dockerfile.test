@@ -1,12 +1,14 @@
 # Dockerfile for running tests in watch mode
 # This is optimized for development and testing purposes only
 
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 # Install dependencies for better terminal support
-RUN apk add --no-cache tini
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tini \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
@@ -23,7 +25,7 @@ COPY .eslintrc.js ./
 COPY src ./src
 
 # Use tini to handle signals properly
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Default command (can be overridden in docker-compose.yml)
 CMD ["npm", "run", "test:watch"]
