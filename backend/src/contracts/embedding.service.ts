@@ -4,6 +4,14 @@ import { pipeline, env } from "@xenova/transformers";
 // Disable local model cache check - use cache directly
 env.allowLocalModels = false;
 
+// Configure HuggingFace authentication token if provided
+// The HF_TOKEN environment variable is automatically used by @xenova/transformers
+if (process.env.HF_TOKEN) {
+  env.remoteHost = "https://huggingface.co";
+  env.remotePathTemplate = "{model}/resolve/{revision}/{file}";
+  // Token will be automatically included in requests by the library
+}
+
 /**
  * Service for generating text embeddings using the google/embeddinggemma-300m model
  * from HuggingFace via @xenova/transformers

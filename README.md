@@ -186,14 +186,44 @@ This three-step approach ensures:
    cp .env-example .env
    ```
 
-2. Edit `.env` file and set your Neo4j password and other configurations
+2. Edit `.env` file and set required configurations:
 
-3. Run Docker Compose to start all services:
+   **Required:**
+   - `NEO4J_PASSWORD`: Your Neo4j database password
+   - `HF_TOKEN`: Your HuggingFace access token (see below)
+
+   **Optional:**
+   - Other backend and Neo4j settings
+
+3. **Set up HuggingFace Access Token** (required for embedding functionality):
+
+   The system uses AI embeddings to enable semantic search of module descriptions. This requires a HuggingFace account and access token:
+
+   a. Create a free account at [HuggingFace](https://huggingface.co)
+   
+   b. Generate an access token:
+      - Go to [HuggingFace Settings > Access Tokens](https://huggingface.co/settings/tokens)
+      - Click "New token"
+      - Select "Read" access type
+      - Copy the generated token
+   
+   c. Accept the model terms:
+      - Visit [google/embeddinggemma-300m](https://huggingface.co/google/embeddinggemma-300m)
+      - Click "Agree and access repository" if prompted
+   
+   d. Add the token to your `.env` file:
+      ```bash
+      HF_TOKEN=hf_your_token_here
+      ```
+
+   **Note:** Without a valid HuggingFace token, the embedding service will fail to initialize and semantic search features will be disabled. The system will continue to work but without embedding functionality.
+
+4. Run Docker Compose to start all services:
    ```bash
    docker-compose up -d
    ```
 
-4. Wait for services to start (usually 30-60 seconds), then verify:
+5. Wait for services to start (usually 30-60 seconds), then verify:
    - Backend API: http://localhost:3000
    - Backend Health: http://localhost:3000/health
    - Test Endpoint: http://localhost:3000/api/test
@@ -356,3 +386,6 @@ All configuration is stored in the `.env` file. See `.env-example` for available
 - `NEO4J_PASSWORD`: Neo4j password (must be set)
 - `NEO4J_HTTP_PORT`: Neo4j browser port (default: 7474)
 - `NEO4J_BOLT_PORT`: Neo4j bolt port (default: 7687)
+- `HF_TOKEN`: HuggingFace access token for downloading AI models (required for embeddings)
+- `CONTRACTS_HOST_DIR`: Path to contracts directory on host machine (default: ./contracts)
+- `CONTRACTS_PATH`: Glob pattern for finding YAML files inside container (default: /contracts/**/*.yml)
