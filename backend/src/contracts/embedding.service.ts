@@ -5,14 +5,20 @@ import { pipeline, env } from "@xenova/transformers";
 env.allowLocalModels = false;
 
 /**
- * Service for generating text embeddings using the google/embeddinggemma-300m model
+ * Service for generating text embeddings using the Xenova/all-MiniLM-L6-v2 model
  * from HuggingFace via @xenova/transformers
+ * 
+ * This model:
+ * - Generates 384-dimensional embeddings
+ * - Is optimized for semantic similarity tasks
+ * - Lightweight and fast (only ~80MB)
+ * - No authentication required
  */
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
   private embeddingPipeline: any;
-  private readonly modelName = "google/embeddinggemma-300m";
+  private readonly modelName = "Xenova/all-MiniLM-L6-v2";
 
   /**
    * Initialize the embedding pipeline

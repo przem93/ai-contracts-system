@@ -44,7 +44,7 @@ describe("EmbeddingService", () => {
 
       await service.initialize();
       expect(service.isReady()).toBe(true);
-      expect(pipeline).toHaveBeenCalledWith("feature-extraction", "google/embeddinggemma-300m");
+      expect(pipeline).toHaveBeenCalledWith("feature-extraction", "Xenova/all-MiniLM-L6-v2");
     });
   });
 
