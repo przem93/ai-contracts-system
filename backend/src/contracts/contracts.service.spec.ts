@@ -2,15 +2,25 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import { ContractsService } from "./contracts.service";
 import { Neo4jService } from "../neo4j/neo4j.service";
+import { EmbeddingService } from "./embedding.service";
 import { Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import * as path from "path";
 import * as crypto from "crypto";
 
+// Mock @xenova/transformers module
+jest.mock("@xenova/transformers", () => ({
+  pipeline: jest.fn(),
+  env: {
+    allowLocalModels: false,
+  },
+}));
+
 describe("ContractsService", () => {
   let service: ContractsService;
   let configService: ConfigService;
   let neo4jService: Neo4jService;
+  let embeddingService: EmbeddingService;
   let mockSession: any;
 
   beforeEach(async () => {
@@ -49,6 +59,14 @@ describe("ContractsService", () => {
             getDriver: jest.fn(),
           },
         },
+        {
+          provide: EmbeddingService,
+          useValue: {
+            initialize: jest.fn().mockResolvedValue(undefined),
+            generateEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+            isReady: jest.fn().mockReturnValue(false), // Default to not ready
+          },
+        },
       ],
     })
       .setLogger({
@@ -63,6 +81,7 @@ describe("ContractsService", () => {
     service = module.get<ContractsService>(ContractsService);
     configService = module.get<ConfigService>(ConfigService);
     neo4jService = module.get<Neo4jService>(Neo4jService);
+    embeddingService = module.get<EmbeddingService>(EmbeddingService);
   });
 
   it("should be defined", () => {
@@ -1620,6 +1639,172 @@ describe("ContractsService", () => {
         expect.objectContaining({
           module_id: "module-2",
           contractFileHash: "hash222",
+        }),
+      );
+    });
+
+    it("should generate and store embeddings when embedding service is ready", async () => {
+      const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+      
+      // Mock embedding service to be ready and return embedding
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
+      jest.spyOn(embeddingService, "generateEmbedding").mockResolvedValue(mockEmbedding);
+
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "abc123",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module description",
+          },
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify generateEmbedding was called with the description
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("Test module description");
+
+      // Verify module creation was called with embedding
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding = $embedding"),
+        expect.objectContaining({
+          module_id: "test-module",
+          description: "Test module description",
+          embedding: mockEmbedding,
+        }),
+      );
+    });
+
+    it("should store null embedding when embedding service is not ready", async () => {
+      // Mock embedding service to not be ready
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(false);
+
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "abc123",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module description",
+          },
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify generateEmbedding was NOT called
+      expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
+
+      // Verify module creation was called with null embedding
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding = $embedding"),
+        expect.objectContaining({
+          module_id: "test-module",
+          description: "Test module description",
+          embedding: null,
+        }),
+      );
+    });
+
+    it("should handle embedding generation errors gracefully", async () => {
+      // Mock embedding service to be ready but throw error
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
+      jest.spyOn(embeddingService, "generateEmbedding").mockRejectedValue(new Error("Embedding generation failed"));
+
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "test-module.yml",
+          filePath: "/test/test-module.yml",
+          fileHash: "abc123",
+          content: {
+            id: "test-module",
+            type: "service",
+            category: "backend",
+            description: "Test module description",
+          },
+        },
+      ];
+
+      const result = await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify the contract was still applied (graceful degradation)
+      expect(result.success).toBe(true);
+      expect(result.modulesProcessed).toBe(1);
+
+      // Verify module creation was called with null embedding (fallback)
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding = $embedding"),
+        expect.objectContaining({
+          module_id: "test-module",
+          description: "Test module description",
+          embedding: null,
+        }),
+      );
+    });
+
+    it("should generate embeddings for multiple contracts", async () => {
+      const mockEmbedding1 = [0.1, 0.2, 0.3];
+      const mockEmbedding2 = [0.4, 0.5, 0.6];
+      
+      // Mock embedding service to be ready
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
+      jest.spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValueOnce(mockEmbedding1)
+        .mockResolvedValueOnce(mockEmbedding2);
+
+      const contractFiles: ContractFileDto[] = [
+        {
+          fileName: "module-1.yml",
+          filePath: "/test/module-1.yml",
+          fileHash: "hash1",
+          content: {
+            id: "module-1",
+            type: "service",
+            category: "backend",
+            description: "First module description",
+          },
+        },
+        {
+          fileName: "module-2.yml",
+          filePath: "/test/module-2.yml",
+          fileHash: "hash2",
+          content: {
+            id: "module-2",
+            type: "controller",
+            category: "api",
+            description: "Second module description",
+          },
+        },
+      ];
+
+      await service.applyContractsToNeo4j(contractFiles);
+
+      // Verify generateEmbedding was called for both descriptions
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("First module description");
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("Second module description");
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledTimes(2);
+
+      // Verify module creation was called with correct embeddings
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding = $embedding"),
+        expect.objectContaining({
+          module_id: "module-1",
+          embedding: mockEmbedding1,
+        }),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding = $embedding"),
+        expect.objectContaining({
+          module_id: "module-2",
+          embedding: mockEmbedding2,
         }),
       );
     });

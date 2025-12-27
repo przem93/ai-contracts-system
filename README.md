@@ -186,7 +186,14 @@ This three-step approach ensures:
    cp .env-example .env
    ```
 
-2. Edit `.env` file and set your Neo4j password and other configurations
+2. Edit `.env` file and set required configurations:
+
+   **Required:**
+   - `NEO4J_PASSWORD`: Your Neo4j database password
+
+   **Optional:**
+   - `HF_TOKEN`: HuggingFace access token (only needed for gated/private models)
+   - Other backend and Neo4j settings
 
 3. Run Docker Compose to start all services:
    ```bash
@@ -356,3 +363,14 @@ All configuration is stored in the `.env` file. See `.env-example` for available
 - `NEO4J_PASSWORD`: Neo4j password (must be set)
 - `NEO4J_HTTP_PORT`: Neo4j browser port (default: 7474)
 - `NEO4J_BOLT_PORT`: Neo4j bolt port (default: 7687)
+- `HF_TOKEN`: HuggingFace access token (optional, only for gated models)
+- `CONTRACTS_HOST_DIR`: Path to contracts directory on host machine (default: ./contracts)
+- `CONTRACTS_PATH`: Glob pattern for finding YAML files inside container (default: /contracts/**/*.yml)
+
+### Embedding Model
+
+The system uses the `Xenova/all-MiniLM-L6-v2` model for generating text embeddings:
+- **384-dimensional** embeddings for semantic search
+- **Lightweight** (~80MB) and fast inference
+- **No authentication required** - works out of the box
+- Optimized for semantic similarity tasks

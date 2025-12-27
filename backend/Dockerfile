@@ -1,8 +1,12 @@
-FROM node:23.8-alpine3.20
+FROM node:23.8-slim
 
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache netcat-openbsd
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    netcat-openbsd \
+    wget \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package*.json ./
 

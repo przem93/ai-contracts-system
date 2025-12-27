@@ -45,6 +45,8 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       # CONTRACTS_PATH should be a glob pattern inside the container
       - CONTRACTS_PATH=${CONTRACTS_PATH:-/contracts/**/*.yml}
+      # HuggingFace token for downloading gated models
+      - HF_TOKEN=${HF_TOKEN}
     volumes:
       - ./backend:/usr/src/app
       - /usr/src/app/node_modules
