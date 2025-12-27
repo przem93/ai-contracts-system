@@ -2738,4 +2738,351 @@ describe("ContractsService", () => {
       expect(mockSession.close).toHaveBeenCalled();
     });
   });
+
+  describe("searchByDescription", () => {
+    beforeEach(() => {
+      // Mock embedding service to be ready by default for these tests
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
+    });
+
+    it("should search modules by description and return results", async () => {
+      const query = "user authentication service";
+      const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+              type: "service",
+              description: "Authentication service for users",
+              category: "backend",
+              similarity: 0.92,
+            };
+            return data[field];
+          },
+        },
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "users-service",
+              type: "service",
+              description: "User management service",
+              category: "backend",
+              similarity: 0.78,
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(query, 10);
+
+      expect(result).toBeDefined();
+      expect(result.query).toBe(query);
+      expect(result.resultsCount).toBe(2);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].module_id).toBe("auth-service");
+      expect(result.results[0].similarity).toBe(0.92);
+      expect(result.results[1].module_id).toBe("users-service");
+      expect(result.results[1].similarity).toBe(0.78);
+
+      // Verify embedding was generated for the query
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(query);
+
+      // Verify Neo4j query was executed with correct parameters
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MATCH (m:Module)"),
+        expect.objectContaining({
+          queryEmbedding: mockEmbedding,
+          limit: 10,
+        }),
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should use custom limit parameter", async () => {
+      const query = "test query";
+      const customLimit = 5;
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, customLimit);
+
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          limit: customLimit,
+        }),
+      );
+    });
+
+    it("should return empty results when no matching modules found", async () => {
+      const query = "nonexistent module";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      const result = await service.searchByDescription(query, 10);
+
+      expect(result.query).toBe(query);
+      expect(result.resultsCount).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it("should throw error for empty query", async () => {
+      await expect(service.searchByDescription("", 10)).rejects.toThrow(
+        "Search query cannot be empty",
+      );
+
+      expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
+      expect(mockSession.run).not.toHaveBeenCalled();
+    });
+
+    it("should throw error for whitespace-only query", async () => {
+      await expect(service.searchByDescription("   ", 10)).rejects.toThrow(
+        "Search query cannot be empty",
+      );
+
+      expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
+      expect(mockSession.run).not.toHaveBeenCalled();
+    });
+
+    it("should throw error when embedding service is not ready", async () => {
+      jest.spyOn(embeddingService, "isReady").mockReturnValue(false);
+
+      await expect(
+        service.searchByDescription("test query", 10),
+      ).rejects.toThrow("Embedding service is not ready");
+
+      expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
+      expect(mockSession.run).not.toHaveBeenCalled();
+    });
+
+    it("should handle embedding generation errors", async () => {
+      const query = "test query";
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockRejectedValue(new Error("Embedding model error"));
+
+      await expect(service.searchByDescription(query, 10)).rejects.toThrow(
+        "Failed to search modules by description",
+      );
+
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(query);
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should handle Neo4j query errors", async () => {
+      const query = "test query";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockRejectedValue(new Error("Neo4j connection error"));
+
+      await expect(service.searchByDescription(query, 10)).rejects.toThrow(
+        "Failed to search modules by description",
+      );
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should search using cosine similarity (dot product for normalized vectors)", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10);
+
+      // Verify the query uses dot product calculation
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("reduce(dot = 0.0"),
+        expect.any(Object),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.embedding[i] * $queryEmbedding[i]"),
+        expect.any(Object),
+      );
+    });
+
+    it("should filter out modules without embeddings", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10);
+
+      // Verify the query filters for non-null embeddings
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE m.embedding IS NOT NULL"),
+        expect.any(Object),
+      );
+    });
+
+    it("should filter out results with similarity <= 0", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10);
+
+      // Verify the query filters for positive similarity
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE similarity > 0"),
+        expect.any(Object),
+      );
+    });
+
+    it("should order results by similarity descending", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10);
+
+      // Verify the query orders by similarity descending
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("ORDER BY similarity DESC"),
+        expect.any(Object),
+      );
+    });
+
+    it("should return all required fields for each result", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "test-module",
+              type: "service",
+              description: "Test module description",
+              category: "backend",
+              similarity: 0.95,
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(query, 10);
+
+      expect(result.results[0]).toHaveProperty("module_id");
+      expect(result.results[0]).toHaveProperty("type");
+      expect(result.results[0]).toHaveProperty("description");
+      expect(result.results[0]).toHaveProperty("category");
+      expect(result.results[0]).toHaveProperty("similarity");
+    });
+
+    it("should handle queries with special characters", async () => {
+      const query = "user's auth & security";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      const result = await service.searchByDescription(query, 10);
+
+      expect(result.query).toBe(query);
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(query);
+    });
+
+    it("should handle long queries", async () => {
+      const longQuery =
+        "This is a very long query describing a complex authentication and authorization service that handles user login, session management, token validation, and security features";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      const result = await service.searchByDescription(longQuery, 10);
+
+      expect(result.query).toBe(longQuery);
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(longQuery);
+    });
+
+    it("should handle multiple search results correctly", async () => {
+      const query = "service";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      const mockResults = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          get: (field: string) => {
+            const data = {
+              module_id: `service-${i}`,
+              type: "service",
+              description: `Service ${i}`,
+              category: "backend",
+              similarity: 0.9 - i * 0.1,
+            };
+            return data[field];
+          },
+        }));
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(query, 10);
+
+      expect(result.resultsCount).toBe(5);
+      expect(result.results).toHaveLength(5);
+      // Verify all modules are correctly mapped
+      result.results.forEach((res, i) => {
+        expect(res.module_id).toBe(`service-${i}`);
+        expect(res.similarity).toBe(0.9 - i * 0.1);
+      });
+    });
+
+    it("should always close session even on error", async () => {
+      const query = "test";
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockRejectedValue(new Error("Test error"));
+
+      await expect(service.searchByDescription(query, 10)).rejects.toThrow();
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+  });
 });

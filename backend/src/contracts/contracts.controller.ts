@@ -6,14 +6,16 @@ import {
   InternalServerErrorException,
   Param,
   NotFoundException,
+  Query,
 } from "@nestjs/common";
-import { ApiOperation, ApiResponse, ApiTags, ApiParam } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ContractsService } from "./contracts.service";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { ValidationResponseDto } from "./dto/validation-response.dto";
 import { ApplyResponseDto } from "./dto/apply-response.dto";
 import { CheckModifiedResponseDto } from "./dto/check-modified-response.dto";
 import { ModuleRelationsResponseDto } from "./dto/module-relations-response.dto";
+import { SearchByDescriptionResponseDto } from "./dto/search-by-description-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -142,6 +144,72 @@ export class ContractsController {
         throw new NotFoundException(error.message);
       }
       throw error;
+    }
+  }
+
+  @Get("search")
+  @ApiOperation({
+    summary: "Search modules by description using semantic similarity",
+    description:
+      "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.",
+  })
+  @ApiQuery({
+    name: "query",
+    description: "The search query text to find similar modules",
+    example: "user authentication service",
+    required: true,
+  })
+  @ApiQuery({
+    name: "limit",
+    description: "Maximum number of results to return (default: 10)",
+    example: 10,
+    required: false,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns search results ordered by similarity",
+    type: SearchByDescriptionResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Invalid search query (empty or missing)",
+  })
+  @ApiResponse({
+    status: 500,
+    description: "Failed to perform search (embedding service not ready or Neo4j error)",
+  })
+  async searchByDescription(
+    @Query("query") query: string,
+    @Query("limit") limit?: string,
+  ): Promise<SearchByDescriptionResponseDto> {
+    // Validate query parameter
+    if (!query || query.trim().length === 0) {
+      throw new BadRequestException("Search query is required and cannot be empty");
+    }
+
+    // Parse and validate limit parameter
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    if (isNaN(parsedLimit) || parsedLimit < 1) {
+      throw new BadRequestException("Limit must be a positive integer");
+    }
+    if (parsedLimit > 100) {
+      throw new BadRequestException("Limit cannot exceed 100");
+    }
+
+    try {
+      return await this.contractsService.searchByDescription(query, parsedLimit);
+    } catch (error) {
+      if (error.message.includes("Embedding service is not ready")) {
+        throw new InternalServerErrorException(
+          "Embedding service is not available. Please try again later.",
+        );
+      }
+      if (error.message.includes("Search query cannot be empty")) {
+        throw new BadRequestException(error.message);
+      }
+      throw new InternalServerErrorException(
+        `Failed to search modules: ${error.message}`,
+      );
     }
   }
 }
