@@ -1354,11 +1354,15 @@ describe("ContractsController", () => {
       );
 
       result.results.forEach((item) => {
-        expect(item).toHaveProperty("module_id");
-        expect(item).toHaveProperty("type");
-        expect(item).toHaveProperty("description");
-        expect(item).toHaveProperty("category");
+        expect(item).toHaveProperty("fileName");
+        expect(item).toHaveProperty("filePath");
+        expect(item).toHaveProperty("content");
+        expect(item).toHaveProperty("fileHash");
         expect(item).toHaveProperty("similarity");
+        expect(item.content).toHaveProperty("id");
+        expect(item.content).toHaveProperty("type");
+        expect(item.content).toHaveProperty("description");
+        expect(item.content).toHaveProperty("category");
         expect(typeof item.similarity).toBe("number");
         expect(item.similarity).toBeGreaterThan(0);
         expect(item.similarity).toBeLessThanOrEqual(1);

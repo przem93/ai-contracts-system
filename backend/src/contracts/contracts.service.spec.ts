@@ -2817,9 +2817,6 @@ describe("ContractsService", () => {
           get: (field: string) => {
             const data = {
               module_id: "auth-service",
-              type: "service",
-              description: "Authentication service for users",
-              category: "backend",
               similarity: 0.92,
             };
             return data[field];
@@ -2829,9 +2826,6 @@ describe("ContractsService", () => {
           get: (field: string) => {
             const data = {
               module_id: "users-service",
-              type: "service",
-              description: "User management service",
-              category: "backend",
               similarity: 0.78,
             };
             return data[field];
@@ -2839,9 +2833,35 @@ describe("ContractsService", () => {
         },
       ];
 
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service for users",
+            category: "backend",
+          },
+        },
+        {
+          fileName: "users-service.yml",
+          filePath: "/contracts/users-service.yml",
+          fileHash: "hash2",
+          content: {
+            id: "users-service",
+            type: "service",
+            description: "User management service",
+            category: "backend",
+          },
+        },
+      ];
+
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
       mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
@@ -2878,6 +2898,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, customLimit);
@@ -2897,6 +2918,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(query, 10);
@@ -2972,6 +2994,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
@@ -2994,6 +3017,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
@@ -3012,6 +3036,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
@@ -3030,6 +3055,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
@@ -3059,18 +3085,37 @@ describe("ContractsService", () => {
         },
       ];
 
+      const mockContracts = [
+        {
+          fileName: "test-module.yml",
+          filePath: "/contracts/test-module.yml",
+          fileHash: "hash1",
+          content: {
+            id: "test-module",
+            type: "service",
+            description: "Test module description",
+            category: "backend",
+          },
+        },
+      ];
+
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
       mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
 
-      expect(result.results[0]).toHaveProperty("module_id");
-      expect(result.results[0]).toHaveProperty("type");
-      expect(result.results[0]).toHaveProperty("description");
-      expect(result.results[0]).toHaveProperty("category");
+      expect(result.results[0]).toHaveProperty("fileName");
+      expect(result.results[0]).toHaveProperty("filePath");
+      expect(result.results[0]).toHaveProperty("content");
+      expect(result.results[0]).toHaveProperty("fileHash");
       expect(result.results[0]).toHaveProperty("similarity");
+      expect(result.results[0].content).toHaveProperty("id");
+      expect(result.results[0].content).toHaveProperty("type");
+      expect(result.results[0].content).toHaveProperty("description");
+      expect(result.results[0].content).toHaveProperty("category");
     });
 
     it("should handle queries with special characters", async () => {
@@ -3080,6 +3125,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(query, 10);
@@ -3096,6 +3142,7 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
       mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(longQuery, 10);
@@ -3115,18 +3162,30 @@ describe("ContractsService", () => {
           get: (field: string) => {
             const data = {
               module_id: `service-${i}`,
-              type: "service",
-              description: `Service ${i}`,
-              category: "backend",
               similarity: 0.9 - i * 0.1,
             };
             return data[field];
           },
         }));
 
+      const mockContracts = Array(5)
+        .fill(null)
+        .map((_, i) => ({
+          fileName: `service-${i}.yml`,
+          filePath: `/contracts/service-${i}.yml`,
+          fileHash: `hash${i}`,
+          content: {
+            id: `service-${i}`,
+            type: "service",
+            description: `Service ${i}`,
+            category: "backend",
+          },
+        }));
+
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
       mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
