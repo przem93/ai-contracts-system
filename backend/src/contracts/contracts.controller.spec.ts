@@ -70,6 +70,7 @@ describe("ContractsController", () => {
             checkIfContractsModified: jest.fn(),
             getModuleRelations: jest.fn(),
             searchByDescription: jest.fn(),
+            getContractTypes: jest.fn(),
             getCategoriesList: jest.fn(),
           },
         },
