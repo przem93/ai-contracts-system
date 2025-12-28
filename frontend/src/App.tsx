@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Box } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import ContractsListPage from './pages/ContractsListPage';
 import ValidationPage from './pages/ValidationPage';
 import ApplyChangesPage from './pages/ApplyChangesPage';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   return (
@@ -26,11 +28,26 @@ function App() {
             >
               AI Contracts System
             </Typography>
+            <Button
+              component={Link}
+              to="/search"
+              color="inherit"
+              startIcon={<SearchIcon />}
+              sx={{
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                }
+              }}
+            >
+              Search
+            </Button>
           </Toolbar>
         </AppBar>
 
         <Routes>
           <Route path="/" element={<ContractsListPage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/validation" element={<ValidationPage />} />
           <Route path="/apply" element={<ApplyChangesPage />} />
         </Routes>
