@@ -17,10 +17,21 @@ test.describe('Search Page with Category and Type Select', () => {
       });
     });
 
+    // Mock the categories API to ensure consistent test data
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service', 'frontend', 'component']
+        })
+      });
+    });
+
     searchPage = new SearchPage(page);
     await searchPage.navigate();
     
-    // Wait for types to load
+    // Wait for APIs to load
     await page.waitForTimeout(500);
   });
 
@@ -368,6 +379,50 @@ test.describe('Search Page with Category and Type Select', () => {
 test.describe('Search Page - API Integration Tests', () => {
   let searchPage: SearchPage;
 
+  test('should fetch and display categories from API', async ({ page }) => {
+    // Mock the categories API response
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service', 'frontend', 'database']
+        })
+      });
+    });
+
+    // Mock types API (required for page load)
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          types: ['controller', 'service'],
+          count: 2
+        })
+      });
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+
+    // Wait for the categories to be loaded
+    await page.waitForTimeout(500);
+
+    // Click on category select to open the dropdown
+    await searchPage.categorySelect.click();
+
+    // Verify all categories from API are available in the dropdown
+    await expect(page.getByRole('option', { name: 'All Categories' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Api' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Service' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Frontend' })).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Database' })).toBeVisible();
+
+    // Close the dropdown
+    await page.keyboard.press('Escape');
+  });
+
   test('should fetch and display types from API', async ({ page }) => {
     // Mock the types API response
     await page.route('**/api/contracts/types', async (route) => {
@@ -377,6 +432,17 @@ test.describe('Search Page - API Integration Tests', () => {
         body: JSON.stringify({
           types: ['controller', 'service', 'component', 'repository'],
           count: 4
+        })
+      });
+    });
+
+    // Mock categories API (required for page load)
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service']
         })
       });
     });
@@ -401,7 +467,55 @@ test.describe('Search Page - API Integration Tests', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('should handle API error gracefully and show error alert', async ({ page }) => {
+  test('should handle categories API error gracefully and show error alert', async ({ page }) => {
+    // Mock the categories API to return an error
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Internal server error' })
+      });
+    });
+
+    // Mock types API (required for page load)
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          types: ['controller', 'service'],
+          count: 2
+        })
+      });
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+
+    // Wait for the error to be displayed
+    await page.waitForTimeout(500);
+
+    // Verify error alert is displayed
+    const errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Failed to load contract categories' });
+    await expect(errorAlert).toBeVisible();
+
+    // Verify that the category select still has at least the default "All Categories" option
+    await searchPage.categorySelect.click();
+    await expect(page.getByRole('option', { name: 'All Categories' })).toBeVisible();
+  });
+
+  test('should handle types API error gracefully and show error alert', async ({ page }) => {
+    // Mock categories API (required for page load)
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service']
+        })
+      });
+    });
+
     // Mock the types API to return an error
     await page.route('**/api/contracts/types', async (route) => {
       await route.fulfill({
@@ -426,7 +540,58 @@ test.describe('Search Page - API Integration Tests', () => {
     await expect(page.getByRole('option', { name: 'All Types' })).toBeVisible();
   });
 
+  test('should show loading state while fetching categories', async ({ page }) => {
+    // Mock the categories API with a delay
+    await page.route('**/api/contracts/categories', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service']
+        })
+      });
+    });
+
+    // Mock types API (required for page load)
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          types: ['controller', 'service'],
+          count: 2
+        })
+      });
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+
+    // Verify loading indicator is shown (the select should be disabled)
+    const isDisabled = await searchPage.categorySelect.isDisabled();
+    expect(isDisabled).toBe(true);
+
+    // Wait for the API call to complete
+    await page.waitForTimeout(1200);
+
+    // Verify the select is now enabled
+    const isEnabledAfter = await searchPage.categorySelect.isDisabled();
+    expect(isEnabledAfter).toBe(false);
+  });
+
   test('should show loading state while fetching types', async ({ page }) => {
+    // Mock categories API (required for page load)
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service']
+        })
+      });
+    });
+
     // Mock the types API with a delay
     await page.route('**/api/contracts/types', async (route) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
