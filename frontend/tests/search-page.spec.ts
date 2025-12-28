@@ -5,8 +5,23 @@ test.describe('Search Page with Category and Type Select', () => {
   let searchPage: SearchPage;
 
   test.beforeEach(async ({ page }) => {
+    // Mock the types API to ensure consistent test data
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          types: ['controller', 'service', 'component'],
+          count: 3
+        })
+      });
+    });
+
     searchPage = new SearchPage(page);
     await searchPage.navigate();
+    
+    // Wait for types to load
+    await page.waitForTimeout(500);
   });
 
   test('should load the search page successfully', async () => {
