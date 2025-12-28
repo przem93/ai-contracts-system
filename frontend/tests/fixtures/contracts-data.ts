@@ -213,3 +213,171 @@ export const mockCheckModifiedApiResponses = {
     body: JSON.stringify({ message: 'Failed to check contract modifications' }),
   },
 };
+
+/**
+ * Mock data for search endpoint
+ */
+export const mockSearchResults = {
+  // Search results for "user"
+  userSearch: {
+    query: 'user',
+    resultsCount: 3,
+    results: [
+      {
+        fileName: 'users-get.yml',
+        filePath: '/contracts/users-get.yml',
+        content: {
+          id: 'users-get',
+          type: 'controller',
+          category: 'api',
+          description: 'Users get endpoint - retrieves user information from the database',
+        },
+        fileHash: 'a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1',
+        similarity: 0.95,
+      },
+      {
+        fileName: 'users-permissions.yml',
+        filePath: '/contracts/users-permissions.yml',
+        content: {
+          id: 'users-permissions',
+          type: 'service',
+          category: 'service',
+          description: 'Users permissions service - manages user authorization and access control',
+        },
+        fileHash: 'b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3',
+        similarity: 0.88,
+      },
+      {
+        fileName: 'user-profile.yml',
+        filePath: '/contracts/user-profile.yml',
+        content: {
+          id: 'user-profile',
+          type: 'component',
+          category: 'frontend',
+          description: 'User profile component - displays user information and settings',
+        },
+        fileHash: 'c5f4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4',
+        similarity: 0.82,
+      },
+    ],
+  },
+
+  // Search results for "service"
+  serviceSearch: {
+    query: 'service',
+    resultsCount: 3,
+    results: [
+      {
+        fileName: 'users-permissions.yml',
+        filePath: '/contracts/users-permissions.yml',
+        content: {
+          id: 'users-permissions',
+          type: 'service',
+          category: 'service',
+          description: 'Users permissions service - manages user authorization and access control',
+        },
+        fileHash: 'b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3',
+        similarity: 0.92,
+      },
+      {
+        fileName: 'database-service.yml',
+        filePath: '/contracts/database-service.yml',
+        content: {
+          id: 'database-service',
+          type: 'service',
+          category: 'service',
+          description: 'Database service - provides database connection and query execution',
+        },
+        fileHash: 'd6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5',
+        similarity: 0.85,
+      },
+      {
+        fileName: 'auth-service.yml',
+        filePath: '/contracts/auth-service.yml',
+        content: {
+          id: 'auth-service',
+          type: 'service',
+          category: 'service',
+          description: 'Authentication service - handles user authentication and token management',
+        },
+        fileHash: 'e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6',
+        similarity: 0.78,
+      },
+    ],
+  },
+
+  // Search results for "authentication"
+  authSearch: {
+    query: 'authentication',
+    resultsCount: 2,
+    results: [
+      {
+        fileName: 'auth-controller.yml',
+        filePath: '/contracts/auth-controller.yml',
+        content: {
+          id: 'auth-controller',
+          type: 'controller',
+          category: 'api',
+          description: 'Authentication controller - handles user login and authentication flow',
+        },
+        fileHash: 'f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7',
+        similarity: 0.93,
+      },
+      {
+        fileName: 'auth-service.yml',
+        filePath: '/contracts/auth-service.yml',
+        content: {
+          id: 'auth-service',
+          type: 'service',
+          category: 'service',
+          description: 'Authentication service - handles user authentication and token management',
+        },
+        fileHash: 'e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6',
+        similarity: 0.91,
+      },
+    ],
+  },
+
+  // Search results for "database"
+  databaseSearch: {
+    query: 'database',
+    resultsCount: 1,
+    results: [
+      {
+        fileName: 'database-service.yml',
+        filePath: '/contracts/database-service.yml',
+        content: {
+          id: 'database-service',
+          type: 'service',
+          category: 'service',
+          description: 'Database service - provides database connection and query execution',
+        },
+        fileHash: 'd6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5',
+        similarity: 0.96,
+      },
+    ],
+  },
+
+  // Empty search results
+  emptySearch: {
+    query: 'xyznonexistent123',
+    resultsCount: 0,
+    results: [],
+  },
+};
+
+export const mockSearchApiResponses = {
+  // Successful search response
+  success: (searchData: any) => ({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(searchData),
+  }),
+
+  // Server error
+  serverError: {
+    status: 500,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: 'Search failed' }),
+  },
+};

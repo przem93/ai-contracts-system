@@ -17,51 +17,11 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useState, useMemo } from 'react';
 import ContractCard from '../components/ContractCard';
-import { useContractsControllerGetContractTypes, useContractsControllerGetCategories } from '../api/generated/contracts/contracts';
-
-// Mock data for search results
-const mockContracts = [
-  {
-    id: 'users-get',
-    type: 'controller',
-    category: 'api',
-    description: 'Users get endpoint - retrieves user information from the database',
-    fileName: 'users-get.yml',
-    filePath: '/contracts/users-get.yml'
-  },
-  {
-    id: 'users-permissions',
-    type: 'service',
-    category: 'service',
-    description: 'Users permissions service - manages user authorization and access control',
-    fileName: 'users-permissions.yml',
-    filePath: '/contracts/users-permissions.yml'
-  },
-  {
-    id: 'auth-controller',
-    type: 'controller',
-    category: 'api',
-    description: 'Authentication controller - handles user login and authentication flow',
-    fileName: 'auth-controller.yml',
-    filePath: '/contracts/auth-controller.yml'
-  },
-  {
-    id: 'user-profile',
-    type: 'component',
-    category: 'frontend',
-    description: 'User profile component - displays user information and settings',
-    fileName: 'user-profile.yml',
-    filePath: '/contracts/user-profile.yml'
-  },
-  {
-    id: 'database-service',
-    type: 'service',
-    category: 'service',
-    description: 'Database service - provides database connection and query execution',
-    fileName: 'database-service.yml',
-    filePath: '/contracts/database-service.yml'
-  }
-];
+import { 
+  useContractsControllerGetContractTypes, 
+  useContractsControllerGetCategories,
+  useContractsControllerSearchByDescription 
+} from '../api/generated/contracts/contracts';
 
 function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +33,20 @@ function SearchPage() {
 
   // Fetch contract categories from API
   const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
+
+  // Search contracts using the API - only when searchQuery is not empty
+  const { 
+    data: searchData, 
+    isLoading: isLoadingSearch, 
+    isError: isErrorSearch 
+  } = useContractsControllerSearchByDescription(
+    { query: searchQuery, limit: '50' },
+    { 
+      query: { 
+        enabled: searchQuery.trim().length > 0
+      } 
+    }
+  );
 
   // Transform types data into select options
   const typeOptions = useMemo(() => {
@@ -114,13 +88,34 @@ function SearchPage() {
     setSelectedType(event.target.value);
   };
 
-  // Filter contracts based on search query, category, and type (case-insensitive)
-  const filteredContracts = mockContracts.filter(contract => {
-    const matchesSearch = contract.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || contract.category === selectedCategory;
-    const matchesType = selectedType === 'all' || contract.type === selectedType;
-    return matchesSearch && matchesCategory && matchesType;
-  });
+  // Process and filter search results from API
+  const filteredContracts = useMemo(() => {
+    if (!searchData || !searchData.results) {
+      return [];
+    }
+
+    // Map API results to the format expected by ContractCard and apply client-side filters
+    return searchData.results
+      .filter(result => {
+        // Extract contract data from the content field
+        const content = result.content as any;
+        const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
+        const matchesType = selectedType === 'all' || content.type === selectedType;
+        return matchesCategory && matchesType;
+      })
+      .map(result => {
+        const content = result.content as any;
+        return {
+          fileName: result.fileName,
+          filePath: result.filePath,
+          id: content.id,
+          type: content.type,
+          category: content.category,
+          description: content.description,
+          similarity: result.similarity
+        };
+      });
+  }, [searchData, selectedCategory, selectedType]);
 
   return (
     <Container maxWidth="lg">
@@ -246,12 +241,21 @@ function SearchPage() {
               Failed to load contract types. Using default options.
             </Alert>
           )}
+          {isErrorSearch && searchQuery.trim().length > 0 && (
+            <Alert severity="error">
+              Failed to search contracts. Please try again later.
+            </Alert>
+          )}
 
           {/* Search Results */}
           {searchQuery === '' ? (
             <Alert severity="info">
               Start typing to search contracts by description
             </Alert>
+          ) : isLoadingSearch ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
           ) : filteredContracts.length === 0 ? (
             <Alert severity="warning">
               No contracts found matching "{searchQuery}"

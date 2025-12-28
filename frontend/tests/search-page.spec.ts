@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { SearchPage } from './pages/SearchPage';
+import { mockSearchResults, mockSearchApiResponses } from './fixtures/contracts-data';
 
 test.describe('Search Page with Category and Type Select', () => {
   let searchPage: SearchPage;
@@ -26,6 +27,28 @@ test.describe('Search Page with Category and Type Select', () => {
           categories: ['api', 'service', 'frontend', 'component']
         })
       });
+    });
+
+    // Mock the search API endpoint
+    await page.route('**/api/contracts/search*', async (route) => {
+      const url = new URL(route.request().url());
+      const query = url.searchParams.get('query') || '';
+      
+      // Return appropriate mock data based on search query
+      if (query.toLowerCase().includes('user')) {
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+      } else if (query.toLowerCase().includes('service')) {
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
+      } else if (query.toLowerCase().includes('authentication')) {
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.authSearch));
+      } else if (query.toLowerCase().includes('database')) {
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.databaseSearch));
+      } else if (query.toLowerCase().includes('xyznonexistent')) {
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.emptySearch));
+      } else {
+        // Default: return service search results for generic "test" queries
+        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
+      }
     });
 
     searchPage = new SearchPage(page);
@@ -373,6 +396,313 @@ test.describe('Search Page with Category and Type Select', () => {
     selectedType = await searchPage.getSelectedType();
     expect(selectedCategory).toBe('api');
     expect(selectedType).toBe('controller');
+  });
+});
+
+test.describe('Search Page - Search Endpoint Integration', () => {
+  let searchPage: SearchPage;
+
+  test('should fetch and display search results from API', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API with user search results
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+
+    // Wait for results to load
+    await page.waitForTimeout(500);
+
+    // Verify results are displayed
+    await expect(searchPage.resultsCount).toBeVisible();
+    await expect(searchPage.resultsCount).toContainText('Found 3 contracts');
+
+    // Verify contracts are displayed
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(3);
+  });
+
+  test('should show loading spinner while searching', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API with delay
+    await page.route('**/api/contracts/search*', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+
+    // Verify loading spinner appears
+    const loadingSpinner = page.locator('[role="progressbar"]').last();
+    await expect(loadingSpinner).toBeVisible();
+
+    // Wait for results to load
+    await page.waitForTimeout(1200);
+
+    // Verify loading spinner disappears
+    await expect(loadingSpinner).not.toBeVisible();
+  });
+
+  test('should handle search API error gracefully', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API to return error
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.serverError);
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+
+    // Wait for error to appear
+    await page.waitForTimeout(500);
+
+    // Verify error alert is displayed
+    const errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Failed to search contracts' });
+    await expect(errorAlert).toBeVisible();
+  });
+
+  test('should filter search results by category', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API with user search results (mixed categories)
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+    await page.waitForTimeout(500);
+
+    // Initially should show all 3 results
+    let contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(3);
+
+    // Filter by API category
+    await searchPage.selectCategory('Api');
+    await page.waitForTimeout(300);
+
+    // Should show only API category contracts (1 result)
+    contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(1);
+
+    // Verify it's the API contract
+    const hasApiContract = await searchPage.verifyContractExists({ category: 'api' });
+    expect(hasApiContract).toBe(true);
+  });
+
+  test('should filter search results by type', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API with user search results (mixed types)
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+    await page.waitForTimeout(500);
+
+    // Initially should show all 3 results
+    let contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(3);
+
+    // Filter by Service type
+    await searchPage.selectType('Service');
+    await page.waitForTimeout(300);
+
+    // Should show only Service type contracts (1 result)
+    contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(1);
+
+    // Verify it's a service type contract
+    const hasServiceContract = await searchPage.verifyContractExists({ type: 'service' });
+    expect(hasServiceContract).toBe(true);
+  });
+
+  test('should filter search results by both category and type', async ({ page }) => {
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API with user search results
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Perform a search
+    await searchPage.search('user');
+    await page.waitForTimeout(500);
+
+    // Filter by API category and Controller type
+    await searchPage.selectCategory('Api');
+    await searchPage.selectType('Controller');
+    await page.waitForTimeout(300);
+
+    // Should show only API + Controller contracts (1 result)
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBe(1);
+
+    // Verify it matches both criteria
+    const hasMatchingContract = await searchPage.verifyContractExists({ 
+      category: 'api',
+      type: 'controller'
+    });
+    expect(hasMatchingContract).toBe(true);
+  });
+
+  test('should not call search API when query is empty', async ({ page }) => {
+    let searchApiCalled = false;
+
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock search API to track if it's called
+    await page.route('**/api/contracts/search*', async (route) => {
+      searchApiCalled = true;
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Verify info alert is shown
+    await expect(searchPage.infoAlert).toBeVisible();
+
+    // Verify search API was not called
+    expect(searchApiCalled).toBe(false);
   });
 });
 
