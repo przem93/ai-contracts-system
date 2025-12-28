@@ -29,6 +29,20 @@ test.describe('Search Page with Category and Type Select', () => {
       });
     });
 
+    // Mock the get all contracts API endpoint (for filter-only mode)
+    await page.route('**/api/contracts', async (route) => {
+      // Only handle GET requests to /api/contracts (not /api/contracts/*)
+      if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockContracts.mixedCategoryContracts)
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
     // Mock the search API endpoint
     await page.route('**/api/contracts/search*', async (route) => {
       const url = new URL(route.request().url());
@@ -71,10 +85,11 @@ test.describe('Search Page with Category and Type Select', () => {
     await expect(searchPage.typeSelect).toBeVisible();
   });
 
-  test('should display initial info alert when search is empty', async () => {
+  test('should display initial info alert when no filters are active', async () => {
     // Verify info alert is displayed
-    await expect(searchPage.infoAlert).toBeVisible();
-    await expect(searchPage.infoAlert).toContainText('Start typing to search contracts by description');
+    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
+    await expect(infoAlert).toBeVisible();
+    await expect(infoAlert).toContainText('Select a category or type, or search by description');
   });
 
   test('should have "All Categories" selected by default', async () => {
@@ -208,13 +223,68 @@ test.describe('Search Page with Category and Type Select', () => {
 
   test('should clear info alert when starting to search', async () => {
     // Initially, info alert should be visible
-    await expect(searchPage.infoAlert).toBeVisible();
+    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
+    await expect(infoAlert).toBeVisible();
     
     // Start searching
     await searchPage.search('test');
     
     // Info alert should not be visible anymore
-    await expect(searchPage.infoAlert).not.toBeVisible();
+    await expect(infoAlert).not.toBeVisible();
+  });
+
+  test('should allow filtering by category without search query', async () => {
+    // Select a category without entering search text
+    await searchPage.selectCategory('API');
+    
+    // Wait for results to load
+    await searchPage.page.waitForTimeout(500);
+    
+    // Verify results are displayed
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBeGreaterThan(0);
+    
+    // Verify contracts are from API category
+    const hasApiContract = await searchPage.verifyContractExists({ category: 'api' });
+    expect(hasApiContract).toBe(true);
+  });
+
+  test('should allow filtering by type without search query', async () => {
+    // Select a type without entering search text
+    await searchPage.selectType('Service');
+    
+    // Wait for results to load
+    await searchPage.page.waitForTimeout(500);
+    
+    // Verify results are displayed
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBeGreaterThan(0);
+    
+    // Verify contracts are of service type
+    const hasServiceContract = await searchPage.verifyContractExists({ type: 'service' });
+    expect(hasServiceContract).toBe(true);
+  });
+
+  test('should allow filtering by both category and type without search query', async () => {
+    // Select both category and type without entering search text
+    await searchPage.selectCategory('API');
+    await searchPage.selectType('Controller');
+    
+    // Wait for results to load
+    await searchPage.page.waitForTimeout(500);
+    
+    // Verify results are displayed
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBeGreaterThanOrEqual(0);
+    
+    // If there are results, verify they match the filters
+    if (contractsCount > 0) {
+      const hasMatchingContract = await searchPage.verifyContractExists({ 
+        category: 'api',
+        type: 'controller'
+      });
+      expect(hasMatchingContract).toBe(true);
+    }
   });
 
   test('should maintain category selection when changing search query', async () => {
@@ -668,8 +738,9 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     expect(hasMatchingContract).toBe(true);
   });
 
-  test('should not call search API when query is empty', async ({ page }) => {
+  test('should not call search API when query is empty and no filters selected', async ({ page }) => {
     let searchApiCalled = false;
+    let allContractsApiCalled = false;
 
     // Mock supporting APIs
     await page.route('**/api/contracts/types', async (route) => {
@@ -688,6 +759,20 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
+    // Mock get all contracts API to track if it's called
+    await page.route('**/api/contracts', async (route) => {
+      if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
+        allContractsApiCalled = true;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockContracts.mixedCategoryContracts)
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
     // Mock search API to track if it's called
     await page.route('**/api/contracts/search*', async (route) => {
       searchApiCalled = true;
@@ -699,10 +784,63 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     await page.waitForTimeout(500);
 
     // Verify info alert is shown
-    await expect(searchPage.infoAlert).toBeVisible();
+    const infoAlert = page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
+    await expect(infoAlert).toBeVisible();
 
-    // Verify search API was not called
+    // Verify neither API was called
     expect(searchApiCalled).toBe(false);
+    expect(allContractsApiCalled).toBe(false);
+  });
+
+  test('should call all contracts API when filtering without search query', async ({ page }) => {
+    let allContractsApiCalled = false;
+
+    // Mock supporting APIs
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ types: ['controller', 'service', 'component'], count: 3 })
+      });
+    });
+
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ categories: ['api', 'service', 'frontend'] })
+      });
+    });
+
+    // Mock get all contracts API
+    await page.route('**/api/contracts', async (route) => {
+      if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
+        allContractsApiCalled = true;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(mockContracts.mixedCategoryContracts)
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock search API (should not be called)
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    searchPage = new SearchPage(page);
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Select a category (without search query)
+    await searchPage.selectCategory('API');
+    await page.waitForTimeout(500);
+
+    // Verify all contracts API was called
+    expect(allContractsApiCalled).toBe(true);
   });
 });
 

@@ -19,13 +19,16 @@ Successfully integrated the search API endpoint on the search page, replacing mo
 - Conditional API calls (only when search query is not empty)
 
 #### Key Features
-- **Search API Integration**: Calls the `/api/contracts/search` endpoint with query parameter
+- **Dual API Integration**: 
+  - Uses `/api/contracts/search` endpoint when search query is entered
+  - Uses `/api/contracts` endpoint when only category/type filters are selected
 - **Reactive Search**: Search re-triggers on ANY field change (search query, category, or type)
-- **Client-side Filtering**: Filters API results by selected category and type
-- **Loading States**: Shows loading spinner while searching
-- **Error Handling**: Displays error alert if search fails
-- **Empty States**: Shows info message when search query is empty
-- **No Results State**: Shows warning when no contracts match the search
+- **Filter-only Mode**: Users can filter by category or type WITHOUT entering a search query
+- **Client-side Filtering**: Additional filtering by category and type on API results
+- **Loading States**: Shows loading spinner while fetching data
+- **Error Handling**: Displays error alert if API calls fail
+- **Empty States**: Shows info message when no filters are active
+- **No Results State**: Shows warning when no contracts match the criteria
 
 ### 2. Test Fixtures (`frontend/tests/fixtures/contracts-data.ts`)
 
@@ -119,12 +122,31 @@ const filteredContracts = useMemo(() => {
 - Limit of 50 results to keep response size manageable
 
 ### Reactive Search Behavior
-The search now triggers on ANY field change:
-- **Search Query Change**: Triggers new API call with updated query
-- **Category Change**: Triggers new API call with same query (React Query detects key change)
-- **Type Change**: Triggers new API call with same query (React Query detects key change)
+The search now triggers on ANY field change and supports multiple modes:
 
-This ensures users always see fresh results when changing any filter, even though category and type filtering happens client-side.
+#### Mode 1: Search with Query
+When user enters a search query:
+- Uses `/api/contracts/search` endpoint for semantic search
+- Category and type filters are applied client-side
+- Triggers new API call when query, category, or type changes
+
+#### Mode 2: Filter-only Mode
+When user selects category or type WITHOUT entering a search query:
+- Uses `/api/contracts` endpoint to fetch all contracts
+- Category and type filters are applied client-side
+- Triggers new API call when category or type changes
+
+#### Mode 3: No Active Filters
+When no search query and both category/type are "all":
+- Shows info message: "Select a category or type, or search by description"
+- No API calls are made
+
+This ensures users can:
+- Search by description alone
+- Filter by category alone
+- Filter by type alone
+- Combine all three
+- Always see fresh results when changing any filter
 
 ## Test Coverage
 
@@ -186,15 +208,22 @@ This ensures users always see fresh results when changing any filter, even thoug
 
 ## Notes
 
-1. **Reactive Search**: The search now re-triggers on ANY field change (search query, category, or type). This is achieved by including `selectedCategory` and `selectedType` in the React Query key, which causes React Query to treat each combination as a unique query and refetch data when any filter changes.
+1. **Filter-only Mode**: Users can now search by selecting category or type filters WITHOUT entering a search query. This uses the "get all contracts" endpoint and applies filters client-side.
 
-2. **Client-side Filtering Rationale**: The search API endpoint only accepts a `query` parameter for semantic search. Category and type filtering is implemented client-side after fetching results. However, changing these filters still triggers a new API call (due to the query key change), ensuring fresh data.
+2. **Reactive Search**: The search now re-triggers on ANY field change (search query, category, or type). This is achieved by including `selectedCategory` and `selectedType` in the React Query key, which causes React Query to treat each combination as a unique query and refetch data when any filter changes.
 
-3. **Future Enhancement**: Consider adding category and type parameters to the backend search endpoint to enable server-side filtering for better performance with large result sets.
+3. **Smart Endpoint Selection**: 
+   - When search query is present: Uses `/api/contracts/search` for semantic search
+   - When only filters are selected: Uses `/api/contracts` to get all contracts
+   - When no filters are active: Shows info message, no API calls
 
-4. **API Limit**: Set to 50 results to balance between having enough results for filtering and keeping response size manageable.
+4. **Client-side Filtering**: Category and type filtering is implemented client-side after fetching results. This works for both search results and all contracts.
 
-5. **Backward Compatibility**: All existing tests continue to work with the new implementation.
+5. **Future Enhancement**: Consider adding category and type parameters to the backend search endpoint to enable server-side filtering for better performance with large result sets.
+
+6. **API Limit**: Search endpoint limited to 50 results to balance between having enough results for filtering and keeping response size manageable.
+
+7. **Backward Compatibility**: All existing tests updated to work with the new implementation.
 
 ## Files Modified
 

@@ -20,7 +20,8 @@ import ContractCard from '../components/ContractCard';
 import { 
   useContractsControllerGetContractTypes, 
   useContractsControllerGetCategories,
-  useContractsControllerSearchByDescription 
+  useContractsControllerSearchByDescription,
+  useContractsControllerGetAllContracts
 } from '../api/generated/contracts/contracts';
 
 function SearchPage() {
@@ -28,13 +29,18 @@ function SearchPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
 
+  // Check if any filter is active (search query, category, or type)
+  const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasFilters = selectedCategory !== 'all' || selectedType !== 'all';
+  const shouldFetchData = hasSearchQuery || hasFilters;
+
   // Fetch contract types from API
   const { data: typesData, isLoading: isLoadingTypes, isError: isErrorTypes } = useContractsControllerGetContractTypes();
 
   // Fetch contract categories from API
   const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
 
-  // Search contracts using the API - triggers on any field change (query, category, or type)
+  // Search contracts using the search API when there's a search query
   const { 
     data: searchData, 
     isLoading: isLoadingSearch, 
@@ -43,7 +49,7 @@ function SearchPage() {
     { query: searchQuery, limit: '50' },
     { 
       query: { 
-        enabled: searchQuery.trim().length > 0,
+        enabled: hasSearchQuery,
         // Include category and type in query key to trigger refetch when they change
         queryKey: [
           'http://localhost/api/contracts/search',
@@ -54,6 +60,23 @@ function SearchPage() {
       } 
     }
   );
+
+  // Fetch all contracts when only filtering by category/type (no search query)
+  const {
+    data: allContractsData,
+    isLoading: isLoadingAllContracts,
+    isError: isErrorAllContracts
+  } = useContractsControllerGetAllContracts({
+    query: {
+      enabled: !hasSearchQuery && hasFilters,
+      // Include category and type in query key to trigger refetch when they change
+      queryKey: [
+        'http://localhost/api/contracts',
+        selectedCategory,
+        selectedType
+      ]
+    }
+  });
 
   // Transform types data into select options
   const typeOptions = useMemo(() => {
@@ -95,34 +118,64 @@ function SearchPage() {
     setSelectedType(event.target.value);
   };
 
-  // Process and filter search results from API
+  // Determine which data source to use and whether we're loading or have errors
+  const isLoading = hasSearchQuery ? isLoadingSearch : isLoadingAllContracts;
+  const isError = hasSearchQuery ? isErrorSearch : isErrorAllContracts;
+  const rawData = hasSearchQuery ? searchData?.results : allContractsData;
+
+  // Process and filter results from API (either search results or all contracts)
   const filteredContracts = useMemo(() => {
-    if (!searchData || !searchData.results) {
+    if (!rawData) {
       return [];
     }
 
-    // Map API results to the format expected by ContractCard and apply client-side filters
-    return searchData.results
-      .filter(result => {
-        // Extract contract data from the content field
-        const content = result.content as any;
-        const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
-        const matchesType = selectedType === 'all' || content.type === selectedType;
-        return matchesCategory && matchesType;
-      })
-      .map(result => {
-        const content = result.content as any;
-        return {
-          fileName: result.fileName,
-          filePath: result.filePath,
-          id: content.id,
-          type: content.type,
-          category: content.category,
-          description: content.description,
-          similarity: result.similarity
-        };
-      });
-  }, [searchData, selectedCategory, selectedType]);
+    // Handle search results (from search endpoint)
+    if (hasSearchQuery && searchData?.results) {
+      return searchData.results
+        .filter(result => {
+          const content = result.content as any;
+          const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
+          const matchesType = selectedType === 'all' || content.type === selectedType;
+          return matchesCategory && matchesType;
+        })
+        .map(result => {
+          const content = result.content as any;
+          return {
+            fileName: result.fileName,
+            filePath: result.filePath,
+            id: content.id,
+            type: content.type,
+            category: content.category,
+            description: content.description,
+            similarity: result.similarity
+          };
+        });
+    }
+
+    // Handle all contracts (from get all contracts endpoint)
+    if (allContractsData) {
+      return allContractsData
+        .filter(contract => {
+          const content = contract.content as any;
+          const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
+          const matchesType = selectedType === 'all' || content.type === selectedType;
+          return matchesCategory && matchesType;
+        })
+        .map(contract => {
+          const content = contract.content as any;
+          return {
+            fileName: contract.fileName,
+            filePath: contract.filePath,
+            id: content.id,
+            type: content.type,
+            category: content.category,
+            description: content.description
+          };
+        });
+    }
+
+    return [];
+  }, [hasSearchQuery, searchData, allContractsData, selectedCategory, selectedType]);
 
   return (
     <Container maxWidth="lg">
@@ -248,24 +301,24 @@ function SearchPage() {
               Failed to load contract types. Using default options.
             </Alert>
           )}
-          {isErrorSearch && searchQuery.trim().length > 0 && (
+          {isError && shouldFetchData && (
             <Alert severity="error">
-              Failed to search contracts. Please try again later.
+              Failed to {hasSearchQuery ? 'search' : 'load'} contracts. Please try again later.
             </Alert>
           )}
 
           {/* Search Results */}
-          {searchQuery === '' ? (
+          {!shouldFetchData ? (
             <Alert severity="info">
-              Start typing to search contracts by description
+              Select a category or type, or search by description
             </Alert>
-          ) : isLoadingSearch ? (
+          ) : isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
           ) : filteredContracts.length === 0 ? (
             <Alert severity="warning">
-              No contracts found matching "{searchQuery}"
+              No contracts found{hasSearchQuery ? ` matching "${searchQuery}"` : ' with selected filters'}
             </Alert>
           ) : (
             <>
