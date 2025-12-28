@@ -26,6 +26,14 @@ const mockCategories = [
   { value: 'component', label: 'Component' }
 ];
 
+// Mock types
+const mockTypes = [
+  { value: 'all', label: 'All Types' },
+  { value: 'controller', label: 'Controller' },
+  { value: 'service', label: 'Service' },
+  { value: 'component', label: 'Component' }
+];
+
 // Mock data for search results
 const mockContracts = [
   {
@@ -73,16 +81,22 @@ const mockContracts = [
 function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
     setSelectedCategory(event.target.value);
   };
 
-  // Filter contracts based on search query and category (case-insensitive)
+  const handleTypeChange = (event: SelectChangeEvent) => {
+    setSelectedType(event.target.value);
+  };
+
+  // Filter contracts based on search query, category, and type (case-insensitive)
   const filteredContracts = mockContracts.filter(contract => {
     const matchesSearch = contract.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || contract.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesType = selectedType === 'all' || contract.type === selectedType;
+    return matchesSearch && matchesCategory && matchesType;
   });
 
   return (
@@ -102,7 +116,7 @@ function SearchPage() {
               Search Contracts
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Search contracts by description and filter by category
+              Search contracts by description and filter by category and type
             </Typography>
           </Box>
           
@@ -159,6 +173,37 @@ function SearchPage() {
                 {mockCategories.map((category) => (
                   <MenuItem key={category.value} value={category.value}>
                     {category.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Type Select */}
+            <FormControl 
+              sx={{ 
+                minWidth: { xs: '100%', md: 240 },
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                }
+              }}
+            >
+              <InputLabel id="type-select-label">Type</InputLabel>
+              <Select
+                labelId="type-select-label"
+                id="type-select"
+                name="type"
+                value={selectedType}
+                label="Type"
+                onChange={handleTypeChange}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterListIcon />
+                  </InputAdornment>
+                }
+              >
+                {mockTypes.map((type) => (
+                  <MenuItem key={type.value} value={type.value}>
+                    {type.label}
                   </MenuItem>
                 ))}
               </Select>
