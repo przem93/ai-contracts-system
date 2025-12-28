@@ -5,11 +5,26 @@ import {
   Stack,
   TextField,
   InputAdornment,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { useState } from 'react';
 import ContractCard from '../components/ContractCard';
+
+// Mock categories
+const mockCategories = [
+  { value: 'all', label: 'All Categories' },
+  { value: 'api', label: 'API' },
+  { value: 'service', label: 'Service' },
+  { value: 'frontend', label: 'Frontend' },
+  { value: 'component', label: 'Component' }
+];
 
 // Mock data for search results
 const mockContracts = [
@@ -57,11 +72,18 @@ const mockContracts = [
 
 function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Filter contracts based on search query (case-insensitive)
-  const filteredContracts = mockContracts.filter(contract => 
-    contract.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCategoryChange = (event: SelectChangeEvent) => {
+    setSelectedCategory(event.target.value);
+  };
+
+  // Filter contracts based on search query and category (case-insensitive)
+  const filteredContracts = mockContracts.filter(contract => {
+    const matchesSearch = contract.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || contract.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <Container maxWidth="lg">
@@ -80,29 +102,68 @@ function SearchPage() {
               Search Contracts
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Search contracts by description
+              Search contracts by description and filter by category
             </Typography>
           </Box>
           
-          {/* Search Bar */}
-          <TextField
-            fullWidth
-            placeholder="Search by description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'background.paper',
-              }
-            }}
-          />
+          {/* Search and Filter Controls */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            flexDirection: { xs: 'column', md: 'row' },
+            width: '100%'
+          }}>
+            {/* Search Bar */}
+            <TextField
+              fullWidth
+              placeholder="Search by description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                }
+              }}
+            />
+
+            {/* Category Select */}
+            <FormControl 
+              sx={{ 
+                minWidth: { xs: '100%', md: 240 },
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'background.paper',
+                }
+              }}
+            >
+              <InputLabel id="category-select-label">Category</InputLabel>
+              <Select
+                labelId="category-select-label"
+                id="category-select"
+                name="category"
+                value={selectedCategory}
+                label="Category"
+                onChange={handleCategoryChange}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <FilterListIcon />
+                  </InputAdornment>
+                }
+              >
+                {mockCategories.map((category) => (
+                  <MenuItem key={category.value} value={category.value}>
+                    {category.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
 
           {/* Search Results */}
           {searchQuery === '' ? (
