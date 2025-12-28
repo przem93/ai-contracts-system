@@ -1,17 +1,15 @@
 import { 
   Container, 
   Typography, 
-  Card, 
-  CardContent, 
   Box,
   Stack,
   TextField,
   InputAdornment,
-  Chip,
   Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useState } from 'react';
+import ContractCard from '../components/ContractCard';
 
 // Mock data for search results
 const mockContracts = [
@@ -122,41 +120,15 @@ function SearchPage() {
               </Typography>
               <Stack spacing={2}>
                 {filteredContracts.map((contract) => (
-                  <Card key={contract.id} variant="outlined">
-                    <CardContent>
-                      <Stack spacing={2}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="h6">
-                            📄 {contract.fileName}
-                          </Typography>
-                          <Chip 
-                            label={contract.category} 
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                          />
-                        </Box>
-                        
-                        <Typography variant="body2" color="text.secondary">
-                          Path: {contract.filePath}
-                        </Typography>
-
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                            Description:
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {contract.description}
-                          </Typography>
-                        </Box>
-
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Chip label={`ID: ${contract.id}`} size="small" />
-                          <Chip label={`Type: ${contract.type}`} size="small" />
-                        </Box>
-                      </Stack>
-                    </CardContent>
-                  </Card>
+                  <ContractCard
+                    key={contract.id}
+                    fileName={contract.fileName}
+                    filePath={contract.filePath}
+                    id={contract.id}
+                    type={contract.type}
+                    category={contract.category}
+                    description={contract.description}
+                  />
                 ))}
               </Stack>
             </>
