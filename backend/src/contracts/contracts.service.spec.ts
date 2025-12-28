@@ -3200,4 +3200,106 @@ describe("ContractsService", () => {
       expect(mockSession.close).toHaveBeenCalled();
     });
   });
+
+  describe("getContractTypes", () => {
+    const testFixturesPath = path.join(__dirname, "test-fixtures");
+
+    it("should return all unique contract types", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getContractTypes();
+
+      expect(result).toBeDefined();
+      expect(result.types).toBeDefined();
+      expect(result.count).toBeDefined();
+      expect(Array.isArray(result.types)).toBe(true);
+      expect(result.count).toBe(result.types.length);
+    });
+
+    it("should return unique types without duplicates", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getContractTypes();
+
+      // Check for uniqueness
+      const uniqueTypes = new Set(result.types);
+      expect(uniqueTypes.size).toBe(result.types.length);
+    });
+
+    it("should return sorted types alphabetically", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getContractTypes();
+
+      // Check if sorted
+      const sortedTypes = [...result.types].sort();
+      expect(result.types).toEqual(sortedTypes);
+    });
+
+    it("should return empty array when no contracts exist", async () => {
+      const nonExistentPattern = path.join(testFixturesPath, "non-existent-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(nonExistentPattern);
+
+      const result = await service.getContractTypes();
+
+      expect(result.types).toEqual([]);
+      expect(result.count).toBe(0);
+    });
+
+    it("should handle contracts with different types correctly", async () => {
+      // Use all valid contracts to get multiple types
+      const allValidPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(allValidPattern);
+
+      const result = await service.getContractTypes();
+
+      // Verify we got the expected types from test fixtures
+      expect(result.types).toContain("service");
+      expect(result.count).toBeGreaterThan(0);
+    });
+
+    it("should throw error when CONTRACTS_PATH is not set", async () => {
+      jest.spyOn(configService, "get").mockReturnValue(undefined);
+
+      await expect(service.getContractTypes()).rejects.toThrow(
+        "Failed to get contract types: CONTRACTS_PATH environment variable is not set",
+      );
+    });
+
+    it("should handle file read errors gracefully", async () => {
+      const invalidPattern = path.join("/invalid/path/*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(invalidPattern);
+
+      const result = await service.getContractTypes();
+
+      // Should return empty array when no files are found
+      expect(result.types).toEqual([]);
+      expect(result.count).toBe(0);
+    });
+
+    it("should include only valid contract types from parseable files", async () => {
+      const allPattern = path.join(testFixturesPath, "*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(allPattern);
+
+      const result = await service.getContractTypes();
+
+      // All types should be non-empty strings
+      result.types.forEach((type) => {
+        expect(typeof type).toBe("string");
+        expect(type.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("should return count matching types array length", async () => {
+      const validPattern = path.join(testFixturesPath, "valid-*.yml");
+      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+
+      const result = await service.getContractTypes();
+
+      expect(result.count).toBe(result.types.length);
+    });
+  });
 });

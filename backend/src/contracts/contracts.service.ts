@@ -911,6 +911,38 @@ export class ContractsService implements OnModuleInit {
   }
 
   /**
+   * Get all unique contract types from the current contracts
+   * @returns Object with array of unique contract types and their count
+   */
+  async getContractTypes(): Promise<{ types: string[]; count: number }> {
+    try {
+      // Get all contracts
+      const contracts = await this.getAllContracts();
+
+      // Extract unique types
+      const typesSet = new Set<string>();
+      contracts.forEach((contract) => {
+        if (contract.content.type) {
+          typesSet.add(contract.content.type);
+        }
+      });
+
+      // Convert to sorted array
+      const types = Array.from(typesSet).sort();
+
+      this.logger.log(`Found ${types.length} unique contract types: ${types.join(", ")}`);
+
+      return {
+        types,
+        count: types.length,
+      };
+    } catch (error) {
+      this.logger.error("Error getting contract types:", error.message);
+      throw new Error(`Failed to get contract types: ${error.message}`);
+    }
+  }
+
+  /**
    * Search for modules by description using embedding similarity
    * @param query The search query text
    * @param limit Maximum number of results to return (default: 10)
