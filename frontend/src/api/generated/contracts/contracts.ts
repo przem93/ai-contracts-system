@@ -26,8 +26,13 @@ import type {
 
 import type {
   ApplyResponseDto,
+  CategoriesResponseDto,
   CheckModifiedResponseDto,
   ContractFileDto,
+  ContractTypesResponseDto,
+  ContractsControllerSearchByDescriptionParams,
+  ModuleRelationsResponseDto,
+  SearchByDescriptionResponseDto,
   ValidationResponseDto
 } from '.././model';
 
@@ -117,6 +122,97 @@ export function useContractsControllerGetAllContracts<TData = Awaited<ReturnType
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getContractsControllerGetAllContractsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * @summary Get all unique contract types
+ */
+export const contractsControllerGetContractTypes = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<ContractTypesResponseDto>(
+      {url: `http://localhost/api/contracts/types`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getContractsControllerGetContractTypesQueryKey = () => {
+    return [
+    `http://localhost/api/contracts/types`
+    ] as const;
+    }
+
+    
+export const getContractsControllerGetContractTypesQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getContractsControllerGetContractTypesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>> = ({ signal }) => contractsControllerGetContractTypes(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ContractsControllerGetContractTypesQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>>
+export type ContractsControllerGetContractTypesQueryError = void
+
+
+export function useContractsControllerGetContractTypes<TData = Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetContractTypes>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetContractTypes>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetContractTypes<TData = Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetContractTypes>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetContractTypes>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetContractTypes<TData = Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get all unique contract types
+ */
+
+export function useContractsControllerGetContractTypes<TData = Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetContractTypes>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getContractsControllerGetContractTypesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -373,4 +469,280 @@ export const useContractsControllerApplyContracts = <TError = void | void,
 
       return useMutation(mutationOptions, queryClient);
     }
+    /**
+ * Returns outgoing dependencies (modules this module depends on) and incoming dependencies (modules that depend on this module) with the parts they use
+ * @summary Get relations for a specific module
+ */
+export const contractsControllerGetModuleRelations = (
+    moduleId: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<ModuleRelationsResponseDto>(
+      {url: `http://localhost/api/contracts/${moduleId}/relations`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getContractsControllerGetModuleRelationsQueryKey = (moduleId?: string,) => {
+    return [
+    `http://localhost/api/contracts/${moduleId}/relations`
+    ] as const;
+    }
+
     
+export const getContractsControllerGetModuleRelationsQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError = void>(moduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getContractsControllerGetModuleRelationsQueryKey(moduleId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>> = ({ signal }) => contractsControllerGetModuleRelations(moduleId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(moduleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ContractsControllerGetModuleRelationsQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>>
+export type ContractsControllerGetModuleRelationsQueryError = void
+
+
+export function useContractsControllerGetModuleRelations<TData = Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError = void>(
+ moduleId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetModuleRelations<TData = Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError = void>(
+ moduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetModuleRelations<TData = Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError = void>(
+ moduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get relations for a specific module
+ */
+
+export function useContractsControllerGetModuleRelations<TData = Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError = void>(
+ moduleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetModuleRelations>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getContractsControllerGetModuleRelationsQueryOptions(moduleId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.
+ * @summary Search modules by description using semantic similarity
+ */
+export const contractsControllerSearchByDescription = (
+    params: ContractsControllerSearchByDescriptionParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<SearchByDescriptionResponseDto>(
+      {url: `http://localhost/api/contracts/search`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getContractsControllerSearchByDescriptionQueryKey = (params?: ContractsControllerSearchByDescriptionParams,) => {
+    return [
+    `http://localhost/api/contracts/search`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getContractsControllerSearchByDescriptionQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getContractsControllerSearchByDescriptionQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>> = ({ signal }) => contractsControllerSearchByDescription(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ContractsControllerSearchByDescriptionQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>>
+export type ContractsControllerSearchByDescriptionQueryError = void | void
+
+
+export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
+ params: ContractsControllerSearchByDescriptionParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerSearchByDescription>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerSearchByDescription>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
+ params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerSearchByDescription>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerSearchByDescription>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
+ params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Search modules by description using semantic similarity
+ */
+
+export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
+ params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getContractsControllerSearchByDescriptionQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+/**
+ * Returns a list of all unique contract category names from the Neo4j database
+ * @summary Get all contract categories
+ */
+export const contractsControllerGetCategories = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customAxiosInstance<CategoriesResponseDto>(
+      {url: `http://localhost/api/contracts/categories`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getContractsControllerGetCategoriesQueryKey = () => {
+    return [
+    `http://localhost/api/contracts/categories`
+    ] as const;
+    }
+
+    
+export const getContractsControllerGetCategoriesQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getContractsControllerGetCategoriesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof contractsControllerGetCategories>>> = ({ signal }) => contractsControllerGetCategories(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ContractsControllerGetCategoriesQueryResult = NonNullable<Awaited<ReturnType<typeof contractsControllerGetCategories>>>
+export type ContractsControllerGetCategoriesQueryError = void
+
+
+export function useContractsControllerGetCategories<TData = Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError = void>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetCategories>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetCategories>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetCategories<TData = Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof contractsControllerGetCategories>>,
+          TError,
+          Awaited<ReturnType<typeof contractsControllerGetCategories>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useContractsControllerGetCategories<TData = Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get all contract categories
+ */
+
+export function useContractsControllerGetCategories<TData = Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError = void>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerGetCategories>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getContractsControllerGetCategoriesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+

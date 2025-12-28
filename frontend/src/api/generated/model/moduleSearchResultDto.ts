@@ -5,15 +5,17 @@
  * API for managing and validating technical dependency contracts
  * OpenAPI spec version: 1.0
  */
-import type { ContractFileDtoContent } from './contractFileDtoContent';
+import type { ModuleSearchResultDtoContent } from './moduleSearchResultDtoContent';
 
-export interface ContractFileDto {
+export interface ModuleSearchResultDto {
   /** The name of the contract file */
   fileName: string;
   /** The full path to the contract file */
   filePath: string;
   /** The parsed contract content */
-  content: ContractFileDtoContent;
+  content: ModuleSearchResultDtoContent;
   /** SHA256 hash of the contract file content */
   fileHash: string;
+  /** Similarity score (0-1, where 1 is most similar) */
+  similarity: number;
 }

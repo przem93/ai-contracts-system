@@ -10,12 +10,14 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  CircularProgress
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import ContractCard from '../components/ContractCard';
+import { useContractsControllerGetContractTypes } from '../api/generated/contracts/contracts';
 
 // Mock categories
 const mockCategories = [
@@ -23,14 +25,6 @@ const mockCategories = [
   { value: 'api', label: 'API' },
   { value: 'service', label: 'Service' },
   { value: 'frontend', label: 'Frontend' },
-  { value: 'component', label: 'Component' }
-];
-
-// Mock types
-const mockTypes = [
-  { value: 'all', label: 'All Types' },
-  { value: 'controller', label: 'Controller' },
-  { value: 'service', label: 'Service' },
   { value: 'component', label: 'Component' }
 ];
 
@@ -82,6 +76,25 @@ function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
+
+  // Fetch contract types from API
+  const { data: typesData, isLoading: isLoadingTypes, isError: isErrorTypes } = useContractsControllerGetContractTypes();
+
+  // Transform types data into select options
+  const typeOptions = useMemo(() => {
+    const allTypesOption = { value: 'all', label: 'All Types' };
+    
+    if (!typesData?.types || typesData.types.length === 0) {
+      return [allTypesOption];
+    }
+
+    const apiTypes = typesData.types.map(type => ({
+      value: type,
+      label: type.charAt(0).toUpperCase() + type.slice(1) // Capitalize first letter
+    }));
+
+    return [allTypesOption, ...apiTypes];
+  }, [typesData]);
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
     setSelectedCategory(event.target.value);
@@ -186,6 +199,7 @@ function SearchPage() {
                   backgroundColor: 'background.paper',
                 }
               }}
+              disabled={isLoadingTypes}
             >
               <InputLabel id="type-select-label">Type</InputLabel>
               <Select
@@ -197,11 +211,11 @@ function SearchPage() {
                 onChange={handleTypeChange}
                 startAdornment={
                   <InputAdornment position="start">
-                    <FilterListIcon />
+                    {isLoadingTypes ? <CircularProgress size={20} /> : <FilterListIcon />}
                   </InputAdornment>
                 }
               >
-                {mockTypes.map((type) => (
+                {typeOptions.map((type) => (
                   <MenuItem key={type.value} value={type.value}>
                     {type.label}
                   </MenuItem>
@@ -209,6 +223,13 @@ function SearchPage() {
               </Select>
             </FormControl>
           </Box>
+
+          {/* Error Alert for Types API */}
+          {isErrorTypes && (
+            <Alert severity="error">
+              Failed to load contract types. Using default options.
+            </Alert>
+          )}
 
           {/* Search Results */}
           {searchQuery === '' ? (
