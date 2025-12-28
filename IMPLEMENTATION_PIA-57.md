@@ -20,6 +20,7 @@ Successfully integrated the search API endpoint on the search page, replacing mo
 
 #### Key Features
 - **Search API Integration**: Calls the `/api/contracts/search` endpoint with query parameter
+- **Reactive Search**: Search re-triggers on ANY field change (search query, category, or type)
 - **Client-side Filtering**: Filters API results by selected category and type
 - **Loading States**: Shows loading spinner while searching
 - **Error Handling**: Displays error alert if search fails
@@ -113,8 +114,17 @@ const filteredContracts = useMemo(() => {
 
 ### Performance Optimization
 - API calls are only triggered when search query is not empty (`enabled: searchQuery.trim().length > 0`)
+- **Reactive Query Key**: Category and type are included in the React Query key, causing automatic refetch when these filters change
 - Results are filtered efficiently using `useMemo` to prevent unnecessary recalculations
 - Limit of 50 results to keep response size manageable
+
+### Reactive Search Behavior
+The search now triggers on ANY field change:
+- **Search Query Change**: Triggers new API call with updated query
+- **Category Change**: Triggers new API call with same query (React Query detects key change)
+- **Type Change**: Triggers new API call with same query (React Query detects key change)
+
+This ensures users always see fresh results when changing any filter, even though category and type filtering happens client-side.
 
 ## Test Coverage
 
@@ -176,13 +186,15 @@ const filteredContracts = useMemo(() => {
 
 ## Notes
 
-1. **Client-side Filtering Rationale**: The search API endpoint only accepts a `query` parameter for semantic search. Category and type filtering is implemented client-side to meet the requirement of using all three inputs (search, category, type). This is an acceptable approach given the limit of 50 results.
+1. **Reactive Search**: The search now re-triggers on ANY field change (search query, category, or type). This is achieved by including `selectedCategory` and `selectedType` in the React Query key, which causes React Query to treat each combination as a unique query and refetch data when any filter changes.
 
-2. **Future Enhancement**: Consider adding category and type parameters to the backend search endpoint to enable server-side filtering for better performance with large result sets.
+2. **Client-side Filtering Rationale**: The search API endpoint only accepts a `query` parameter for semantic search. Category and type filtering is implemented client-side after fetching results. However, changing these filters still triggers a new API call (due to the query key change), ensuring fresh data.
 
-3. **API Limit**: Set to 50 results to balance between having enough results for filtering and keeping response size manageable.
+3. **Future Enhancement**: Consider adding category and type parameters to the backend search endpoint to enable server-side filtering for better performance with large result sets.
 
-4. **Backward Compatibility**: All existing tests continue to work with the new implementation.
+4. **API Limit**: Set to 50 results to balance between having enough results for filtering and keeping response size manageable.
+
+5. **Backward Compatibility**: All existing tests continue to work with the new implementation.
 
 ## Files Modified
 

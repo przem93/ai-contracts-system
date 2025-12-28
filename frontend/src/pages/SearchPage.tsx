@@ -34,7 +34,7 @@ function SearchPage() {
   // Fetch contract categories from API
   const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
 
-  // Search contracts using the API - only when searchQuery is not empty
+  // Search contracts using the API - triggers on any field change (query, category, or type)
   const { 
     data: searchData, 
     isLoading: isLoadingSearch, 
@@ -43,7 +43,14 @@ function SearchPage() {
     { query: searchQuery, limit: '50' },
     { 
       query: { 
-        enabled: searchQuery.trim().length > 0
+        enabled: searchQuery.trim().length > 0,
+        // Include category and type in query key to trigger refetch when they change
+        queryKey: [
+          'http://localhost/api/contracts/search',
+          { query: searchQuery, limit: '50' },
+          selectedCategory,
+          selectedType
+        ]
       } 
     }
   );
