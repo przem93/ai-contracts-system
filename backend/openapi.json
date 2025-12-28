@@ -190,14 +190,14 @@
     "/api/contracts/search": {
       "get": {
         "operationId": "ContractsController_searchByDescription",
-        "summary": "Search modules by description using semantic similarity",
-        "description": "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules. Optionally filter by type and/or category.",
+        "summary": "Search and filter modules",
+        "description": "Search for modules using semantic similarity (when query is provided) and/or filter by type and category. At least one parameter (query, type, or category) must be provided.",
         "parameters": [
           {
             "name": "query",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "The search query text to find similar modules",
+            "description": "The search query text to find similar modules using semantic similarity",
             "schema": {
               "example": "user authentication service",
               "type": "string"
@@ -236,7 +236,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Returns search results ordered by similarity",
+            "description": "Returns search results ordered by similarity (if query provided) or by module_id",
             "content": {
               "application/json": {
                 "schema": {
@@ -246,7 +246,7 @@
             }
           },
           "400": {
-            "description": "Invalid search query (empty or missing)"
+            "description": "At least one parameter (query, type, or category) must be provided"
           },
           "500": {
             "description": "Failed to perform search (embedding service not ready or Neo4j error)"

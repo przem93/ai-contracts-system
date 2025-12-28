@@ -2928,22 +2928,228 @@ describe("ContractsService", () => {
       expect(result.results).toEqual([]);
     });
 
-    it("should throw error for empty query", async () => {
-      await expect(service.searchByDescription("", 10)).rejects.toThrow(
-        "Search query cannot be empty",
+    it("should filter by type only without query (no semantic search)", async () => {
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+            };
+            return data[field];
+          },
+        },
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "users-service",
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+        {
+          fileName: "users-service.yml",
+          filePath: "/contracts/users-service.yml",
+          fileHash: "hash2",
+          content: {
+            id: "users-service",
+            type: "service",
+            description: "User management service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        undefined,
+        10,
+        "service",
+        undefined,
       );
 
+      expect(result).toBeDefined();
+      expect(result.query).toBe("");
+      expect(result.resultsCount).toBe(2);
+      expect(result.results).toHaveLength(2);
+
+      // Verify embedding service was NOT used
       expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
-      expect(mockSession.run).not.toHaveBeenCalled();
+
+      // Verify Neo4j query uses simple filter without similarity
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE m.type = $type"),
+        expect.objectContaining({
+          type: "service",
+          limit: neo4jInt(10),
+        }),
+      );
+
+      // Verify query does NOT contain embedding/similarity logic
+      const queryString = mockSession.run.mock.calls[0][0];
+      expect(queryString).not.toContain("embedding");
+      expect(queryString).not.toContain("similarity");
+      expect(queryString).toContain("ORDER BY m.module_id ASC");
     });
 
-    it("should throw error for whitespace-only query", async () => {
-      await expect(service.searchByDescription("   ", 10)).rejects.toThrow(
-        "Search query cannot be empty",
+    it("should filter by category only without query (no semantic search)", async () => {
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        undefined,
+        10,
+        undefined,
+        "backend",
       );
 
+      expect(result).toBeDefined();
+      expect(result.query).toBe("");
+      expect(result.resultsCount).toBe(1);
+
+      // Verify embedding service was NOT used
       expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
-      expect(mockSession.run).not.toHaveBeenCalled();
+
+      // Verify Neo4j query uses simple filter
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE m.category = $category"),
+        expect.objectContaining({
+          category: "backend",
+          limit: neo4jInt(10),
+        }),
+      );
+    });
+
+    it("should filter by type and category without query (no semantic search)", async () => {
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        undefined,
+        10,
+        "service",
+        "backend",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.query).toBe("");
+      expect(result.resultsCount).toBe(1);
+
+      // Verify embedding service was NOT used
+      expect(embeddingService.generateEmbedding).not.toHaveBeenCalled();
+
+      // Verify Neo4j query uses both filters
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE m.type = $type AND m.category = $category"),
+        expect.objectContaining({
+          type: "service",
+          category: "backend",
+          limit: neo4jInt(10),
+        }),
+      );
+    });
+
+    it("should set similarity to 1.0 for filter-only results (no query)", async () => {
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        undefined,
+        10,
+        "service",
+      );
+
+      expect(result.results[0].similarity).toBe(1.0);
     });
 
     it("should throw error when embedding service is not ready", async () => {
@@ -2964,7 +3170,7 @@ describe("ContractsService", () => {
         .mockRejectedValue(new Error("Embedding model error"));
 
       await expect(service.searchByDescription(query, 10)).rejects.toThrow(
-        "Failed to search modules by description",
+        "Failed to search modules",
       );
 
       expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(query);
@@ -2981,7 +3187,7 @@ describe("ContractsService", () => {
       mockSession.run.mockRejectedValue(new Error("Neo4j connection error"));
 
       await expect(service.searchByDescription(query, 10)).rejects.toThrow(
-        "Failed to search modules by description",
+        "Failed to search modules",
       );
 
       expect(mockSession.close).toHaveBeenCalled();

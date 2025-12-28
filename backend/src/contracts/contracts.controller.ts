@@ -178,15 +178,15 @@ export class ContractsController {
 
   @Get("search")
   @ApiOperation({
-    summary: "Search modules by description using semantic similarity",
+    summary: "Search and filter modules",
     description:
-      "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules. Optionally filter by type and/or category.",
+      "Search for modules using semantic similarity (when query is provided) and/or filter by type and category. At least one parameter (query, type, or category) must be provided.",
   })
   @ApiQuery({
     name: "query",
-    description: "The search query text to find similar modules",
+    description: "The search query text to find similar modules using semantic similarity",
     example: "user authentication service",
-    required: true,
+    required: false,
   })
   @ApiQuery({
     name: "limit",
@@ -208,12 +208,12 @@ export class ContractsController {
   })
   @ApiResponse({
     status: 200,
-    description: "Returns search results ordered by similarity",
+    description: "Returns search results ordered by similarity (if query provided) or by module_id",
     type: SearchByDescriptionResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: "Invalid search query (empty or missing)",
+    description: "At least one parameter (query, type, or category) must be provided",
   })
   @ApiResponse({
     status: 500,
@@ -221,15 +221,19 @@ export class ContractsController {
       "Failed to perform search (embedding service not ready or Neo4j error)",
   })
   async searchByDescription(
-    @Query("query") query: string,
+    @Query("query") query?: string,
     @Query("limit") limit?: string,
     @Query("type") type?: string,
     @Query("category") category?: string,
   ): Promise<SearchByDescriptionResponseDto> {
-    // Validate query parameter
-    if (!query || query.trim().length === 0) {
+    // Validate that at least one parameter is provided
+    const hasQuery = query && query.trim().length > 0;
+    const hasType = type && type.trim().length > 0;
+    const hasCategory = category && category.trim().length > 0;
+
+    if (!hasQuery && !hasType && !hasCategory) {
       throw new BadRequestException(
-        "Search query is required and cannot be empty",
+        "At least one parameter (query, type, or category) must be provided",
       );
     }
 
@@ -244,7 +248,7 @@ export class ContractsController {
 
     try {
       return await this.contractsService.searchByDescription(
-        query,
+        hasQuery ? query : undefined,
         parsedLimit,
         type,
         category,
@@ -254,9 +258,6 @@ export class ContractsController {
         throw new InternalServerErrorException(
           "Embedding service is not available. Please try again later.",
         );
-      }
-      if (error.message.includes("Search query cannot be empty")) {
-        throw new BadRequestException(error.message);
       }
       throw new InternalServerErrorException(
         `Failed to search modules: ${error.message}`,

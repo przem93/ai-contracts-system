@@ -950,139 +950,211 @@ export class ContractsService implements OnModuleInit {
   }
 
   /**
-   * Search for modules by description using embedding similarity
-   * @param query The search query text
+   * Search for modules by description using embedding similarity and/or filters
+   * @param query Optional search query text for semantic similarity
    * @param limit Maximum number of results to return (default: 10)
    * @param type Optional filter by contract type
    * @param category Optional filter by contract category
-   * @returns Object with search results ordered by similarity
+   * @returns Object with search results ordered by similarity (if query provided) or module_id
    */
   async searchByDescription(
-    query: string,
+    query?: string,
     limit: number = 10,
     type?: string,
     category?: string,
   ): Promise<SearchByDescriptionResponseDto> {
-    // Validate input
-    if (!query || query.trim().length === 0) {
-      throw new Error("Search query cannot be empty");
-    }
-
-    // Check if embedding service is ready
-    if (!this.embeddingService.isReady()) {
-      throw new Error(
-        "Embedding service is not ready. Cannot perform semantic search.",
-      );
-    }
-
     const session = this.neo4jService.getSession();
 
     try {
-      // Generate embedding for the search query
-      this.logger.log(`Generating embedding for search query: "${query}"`);
-      const queryEmbedding =
-        await this.embeddingService.generateEmbedding(query);
-      this.logger.log(
-        `Generated query embedding with ${queryEmbedding.length} dimensions`,
-      );
+      // If query is provided, use semantic search with embeddings
+      if (query && query.trim().length > 0) {
+        // Check if embedding service is ready
+        if (!this.embeddingService.isReady()) {
+          throw new Error(
+            "Embedding service is not ready. Cannot perform semantic search.",
+          );
+        }
 
-      // Build WHERE clause for filters
-      const whereConditions = ["m.embedding IS NOT NULL"];
-      const parameters: any = {
-        queryEmbedding,
-        limit: neo4jInt(limit),
-      };
+        // Generate embedding for the search query
+        this.logger.log(`Generating embedding for search query: "${query}"`);
+        const queryEmbedding =
+          await this.embeddingService.generateEmbedding(query);
+        this.logger.log(
+          `Generated query embedding with ${queryEmbedding.length} dimensions`,
+        );
 
-      if (type) {
-        whereConditions.push("m.type = $type");
-        parameters.type = type;
+        // Build WHERE clause for filters
+        const whereConditions = ["m.embedding IS NOT NULL"];
+        const parameters: any = {
+          queryEmbedding,
+          limit: neo4jInt(limit),
+        };
+
+        if (type) {
+          whereConditions.push("m.type = $type");
+          parameters.type = type;
+        }
+
+        if (category) {
+          whereConditions.push("m.category = $category");
+          parameters.category = category;
+        }
+
+        const whereClause = whereConditions.join(" AND ");
+
+        // Perform vector similarity search in Neo4j
+        const result = await session.run(
+          `
+          MATCH (m:Module)
+          WHERE ${whereClause}
+          WITH m, 
+               reduce(dot = 0.0, i IN range(0, size(m.embedding)-1) | 
+                 dot + m.embedding[i] * $queryEmbedding[i]
+               ) AS similarity
+          WHERE similarity > 0
+          RETURN m.module_id AS module_id,
+                 similarity
+          ORDER BY similarity DESC
+          LIMIT $limit
+          `,
+          parameters,
+        );
+
+        // Extract module IDs and similarity scores from Neo4j results
+        const searchResults = result.records.map((record) => ({
+          module_id: record.get("module_id"),
+          similarity: record.get("similarity"),
+        }));
+
+        // Get all contract files to fetch full contract information
+        const allContracts = await this.getAllContracts();
+
+        // Create a map of module_id to contract file for efficient lookup
+        const contractsMap = new Map<string, ContractFileDto>();
+        allContracts.forEach((contract) => {
+          contractsMap.set(contract.content.id, contract);
+        });
+
+        // Map search results to include full contract information
+        const results: ModuleSearchResultDto[] = searchResults
+          .map((searchResult) => {
+            const contract = contractsMap.get(searchResult.module_id);
+            if (!contract) {
+              this.logger.warn(
+                `Module "${searchResult.module_id}" found in Neo4j but contract file not found`,
+              );
+              return null;
+            }
+            return {
+              fileName: contract.fileName,
+              filePath: contract.filePath,
+              content: contract.content,
+              fileHash: contract.fileHash,
+              similarity: searchResult.similarity,
+            };
+          })
+          .filter((result): result is ModuleSearchResultDto => result !== null);
+
+        const filterInfo = [];
+        if (type) filterInfo.push(`type: ${type}`);
+        if (category) filterInfo.push(`category: ${category}`);
+        const filterStr = filterInfo.length > 0 ? ` (filters: ${filterInfo.join(", ")})` : "";
+
+        this.logger.log(
+          `Found ${results.length} modules matching query "${query}"${filterStr}`,
+        );
+
+        return {
+          query,
+          resultsCount: results.length,
+          results,
+        };
+      } else {
+        // No query provided - just filter by type/category
+        const whereConditions: string[] = [];
+        const parameters: any = {
+          limit: neo4jInt(limit),
+        };
+
+        if (type) {
+          whereConditions.push("m.type = $type");
+          parameters.type = type;
+        }
+
+        if (category) {
+          whereConditions.push("m.category = $category");
+          parameters.category = category;
+        }
+
+        const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
+
+        // Simple filter query without similarity
+        const result = await session.run(
+          `
+          MATCH (m:Module)
+          ${whereClause}
+          RETURN m.module_id AS module_id
+          ORDER BY m.module_id ASC
+          LIMIT $limit
+          `,
+          parameters,
+        );
+
+        // Extract module IDs from Neo4j results
+        const moduleIds = result.records.map((record) => record.get("module_id"));
+
+        // Get all contract files to fetch full contract information
+        const allContracts = await this.getAllContracts();
+
+        // Create a map of module_id to contract file for efficient lookup
+        const contractsMap = new Map<string, ContractFileDto>();
+        allContracts.forEach((contract) => {
+          contractsMap.set(contract.content.id, contract);
+        });
+
+        // Map results to include full contract information (no similarity score)
+        const results: ModuleSearchResultDto[] = moduleIds
+          .map((moduleId) => {
+            const contract = contractsMap.get(moduleId);
+            if (!contract) {
+              this.logger.warn(
+                `Module "${moduleId}" found in Neo4j but contract file not found`,
+              );
+              return null;
+            }
+            return {
+              fileName: contract.fileName,
+              filePath: contract.filePath,
+              content: contract.content,
+              fileHash: contract.fileHash,
+              similarity: 1.0, // Default similarity when not using semantic search
+            };
+          })
+          .filter((result): result is ModuleSearchResultDto => result !== null);
+
+        const filterInfo = [];
+        if (type) filterInfo.push(`type: ${type}`);
+        if (category) filterInfo.push(`category: ${category}`);
+        const filterStr = filterInfo.length > 0 ? ` (filters: ${filterInfo.join(", ")})` : "";
+
+        this.logger.log(
+          `Found ${results.length} modules${filterStr}`,
+        );
+
+        return {
+          query: query || "",
+          resultsCount: results.length,
+          results,
+        };
       }
-
-      if (category) {
-        whereConditions.push("m.category = $category");
-        parameters.category = category;
-      }
-
-      const whereClause = whereConditions.join(" AND ");
-
-      // Perform vector similarity search in Neo4j
-      // Neo4j doesn't have built-in cosine similarity for lists, so we'll calculate it manually
-      // We use the formula: cosine_similarity = dot_product / (norm_a * norm_b)
-      // Since our embeddings are already normalized (normalize: true in embedding generation),
-      // we can use dot product directly as cosine similarity
-      const result = await session.run(
-        `
-        MATCH (m:Module)
-        WHERE ${whereClause}
-        WITH m, 
-             reduce(dot = 0.0, i IN range(0, size(m.embedding)-1) | 
-               dot + m.embedding[i] * $queryEmbedding[i]
-             ) AS similarity
-        WHERE similarity > 0
-        RETURN m.module_id AS module_id,
-               similarity
-        ORDER BY similarity DESC
-        LIMIT $limit
-        `,
-        parameters,
-      );
-
-      // Extract module IDs and similarity scores from Neo4j results
-      const searchResults = result.records.map((record) => ({
-        module_id: record.get("module_id"),
-        similarity: record.get("similarity"),
-      }));
-
-      // Get all contract files to fetch full contract information
-      const allContracts = await this.getAllContracts();
-
-      // Create a map of module_id to contract file for efficient lookup
-      const contractsMap = new Map<string, ContractFileDto>();
-      allContracts.forEach((contract) => {
-        contractsMap.set(contract.content.id, contract);
-      });
-
-      // Map search results to include full contract information
-      const results: ModuleSearchResultDto[] = searchResults
-        .map((searchResult) => {
-          const contract = contractsMap.get(searchResult.module_id);
-          if (!contract) {
-            this.logger.warn(
-              `Module "${searchResult.module_id}" found in Neo4j but contract file not found`,
-            );
-            return null;
-          }
-          return {
-            fileName: contract.fileName,
-            filePath: contract.filePath,
-            content: contract.content,
-            fileHash: contract.fileHash,
-            similarity: searchResult.similarity,
-          };
-        })
-        .filter((result): result is ModuleSearchResultDto => result !== null);
-
-      const filterInfo = [];
-      if (type) filterInfo.push(`type: ${type}`);
-      if (category) filterInfo.push(`category: ${category}`);
-      const filterStr = filterInfo.length > 0 ? ` (filters: ${filterInfo.join(", ")})` : "";
-
-      this.logger.log(
-        `Found ${results.length} modules matching query "${query}"${filterStr}`,
-      );
-
-      return {
-        query,
-        resultsCount: results.length,
-        results,
-      };
     } catch (error) {
+      const queryInfo = query ? ` for query "${query}"` : "";
       this.logger.error(
-        `Error searching modules by description for query "${query}":`,
+        `Error searching modules${queryInfo}:`,
         error.message,
       );
       throw new Error(
-        `Failed to search modules by description: ${error.message}`,
+        `Failed to search modules: ${error.message}`,
       );
     } finally {
       await session.close();
