@@ -16,6 +16,7 @@ import { ApplyResponseDto } from "./dto/apply-response.dto";
 import { CheckModifiedResponseDto } from "./dto/check-modified-response.dto";
 import { ModuleRelationsResponseDto } from "./dto/module-relations-response.dto";
 import { SearchByDescriptionResponseDto } from "./dto/search-by-description-response.dto";
+import { ContractTypesResponseDto } from "./dto/contract-types-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -31,6 +32,27 @@ export class ContractsController {
   })
   async getAllContracts(): Promise<ContractFileDto[]> {
     return this.contractsService.getAllContracts();
+  }
+
+  @Get("types")
+  @ApiOperation({ summary: "Get all unique contract types" })
+  @ApiResponse({
+    status: 200,
+    description: "Returns all unique contract types found in the system",
+    type: ContractTypesResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: "Failed to retrieve contract types",
+  })
+  async getContractTypes(): Promise<ContractTypesResponseDto> {
+    try {
+      return await this.contractsService.getContractTypes();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to get contract types: ${error.message}`,
+      );
+    }
   }
 
   @Get("validate")
