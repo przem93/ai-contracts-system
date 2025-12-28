@@ -29,14 +29,13 @@ function ContractsListPage() {
   } = useContractsControllerCheckIfContractsModified();
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
       <Box sx={{ 
         minHeight: '100vh', 
         display: 'flex', 
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        textAlign: 'center',
         py: 4
       }}>
         <Stack spacing={3} alignItems="center" sx={{ width: '100%' }}>
@@ -48,13 +47,14 @@ function ContractsListPage() {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              textAlign: 'center',
             }}
           >
             AI Contracts System
           </Typography>
           
-          <Typography variant="h5" color="text.secondary">
+          <Typography variant="h5" color="text.secondary" sx={{ textAlign: 'center' }}>
             AI Coder Agent Contract Systems
           </Typography>
           
