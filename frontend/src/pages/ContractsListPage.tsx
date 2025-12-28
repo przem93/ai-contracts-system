@@ -7,7 +7,6 @@ import {
   Stack,
   CircularProgress,
   Alert,
-  Chip,
   Button
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +14,7 @@ import {
   useContractsControllerGetAllContracts,
   useContractsControllerCheckIfContractsModified 
 } from '../api/generated/contracts/contracts';
+import ContractCard from '../components/ContractCard';
 
 function ContractsListPage() {
   const navigate = useNavigate();
@@ -29,14 +29,13 @@ function ContractsListPage() {
   } = useContractsControllerCheckIfContractsModified();
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
       <Box sx={{ 
         minHeight: '100vh', 
         display: 'flex', 
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        textAlign: 'center',
         py: 4
       }}>
         <Stack spacing={3} alignItems="center" sx={{ width: '100%' }}>
@@ -48,13 +47,14 @@ function ContractsListPage() {
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              textAlign: 'center',
             }}
           >
             AI Contracts System
           </Typography>
           
-          <Typography variant="h5" color="text.secondary">
+          <Typography variant="h5" color="text.secondary" sx={{ textAlign: 'center' }}>
             AI Coder Agent Contract Systems
           </Typography>
           
@@ -85,23 +85,14 @@ function ContractsListPage() {
               {contracts && contracts.length > 0 && (
                 <Stack spacing={2} sx={{ mt: 2 }}>
                   {contracts.map((contract, index) => (
-                    <Card key={index} variant="outlined" data-testid="contract-card">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
-                          📄 {contract.fileName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Path: {contract.filePath}
-                        </Typography>
-                        {contract.content && (
-                          <Box sx={{ mt: 1 }}>
-                            <Chip label={`ID: ${contract.content.id}`} size="small" sx={{ mr: 1 }} />
-                            <Chip label={`Type: ${contract.content.type}`} size="small" sx={{ mr: 1 }} />
-                            <Chip label={`Category: ${contract.content.category}`} size="small" />
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <ContractCard
+                      key={index}
+                      fileName={contract.fileName}
+                      filePath={contract.filePath}
+                      id={contract.content?.id as string}
+                      type={contract.content?.type as string}
+                      category={contract.content?.category as string}
+                    />
                   ))}
                 </Stack>
               )}
