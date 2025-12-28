@@ -190,14 +190,14 @@
     "/api/contracts/search": {
       "get": {
         "operationId": "ContractsController_searchByDescription",
-        "summary": "Search modules by description using semantic similarity",
-        "description": "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.",
+        "summary": "Search and filter modules",
+        "description": "Search for modules using semantic similarity (when query is provided) and/or filter by type and category. At least one parameter (query, type, or category) must be provided.",
         "parameters": [
           {
             "name": "query",
-            "required": true,
+            "required": false,
             "in": "query",
-            "description": "The search query text to find similar modules",
+            "description": "The search query text to find similar modules using semantic similarity",
             "schema": {
               "example": "user authentication service",
               "type": "string"
@@ -212,11 +212,31 @@
               "example": 10,
               "type": "string"
             }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Filter results by contract type (e.g., 'controller', 'service')",
+            "schema": {
+              "example": "service",
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Filter results by contract category (e.g., 'api', 'backend')",
+            "schema": {
+              "example": "backend",
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Returns search results ordered by similarity",
+            "description": "Returns search results ordered by similarity (if query provided) or by module_id",
             "content": {
               "application/json": {
                 "schema": {
@@ -226,10 +246,36 @@
             }
           },
           "400": {
-            "description": "Invalid search query (empty or missing)"
+            "description": "At least one parameter (query, type, or category) must be provided"
           },
           "500": {
             "description": "Failed to perform search (embedding service not ready or Neo4j error)"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
+    "/api/contracts/categories": {
+      "get": {
+        "operationId": "ContractsController_getCategories",
+        "summary": "Get all contract categories",
+        "description": "Returns a list of all unique contract category names from the Neo4j database",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns array of unique category names",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoriesResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to fetch categories"
           }
         },
         "tags": [
@@ -593,25 +639,24 @@
       "ModuleSearchResultDto": {
         "type": "object",
         "properties": {
-          "module_id": {
+          "fileName": {
             "type": "string",
-            "description": "The module ID",
-            "example": "users-service"
+            "description": "The name of the contract file",
+            "example": "example-contract.yml"
           },
-          "type": {
+          "filePath": {
             "type": "string",
-            "description": "The module type",
-            "example": "service"
+            "description": "The full path to the contract file",
+            "example": "/contracts/example-contract.yml"
           },
-          "description": {
-            "type": "string",
-            "description": "The module description",
-            "example": "Service for managing user data and authentication"
+          "content": {
+            "type": "object",
+            "description": "The parsed contract content"
           },
-          "category": {
+          "fileHash": {
             "type": "string",
-            "description": "The module category",
-            "example": "backend"
+            "description": "SHA256 hash of the contract file content",
+            "example": "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1"
           },
           "similarity": {
             "type": "number",
@@ -620,10 +665,10 @@
           }
         },
         "required": [
-          "module_id",
-          "type",
-          "description",
-          "category",
+          "fileName",
+          "filePath",
+          "content",
+          "fileHash",
           "similarity"
         ]
       },
@@ -652,6 +697,26 @@
           "query",
           "resultsCount",
           "results"
+        ]
+      },
+      "CategoriesResponseDto": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "description": "Array of unique contract category names",
+            "example": [
+              "api",
+              "service",
+              "frontend"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "categories"
         ]
       }
     }
