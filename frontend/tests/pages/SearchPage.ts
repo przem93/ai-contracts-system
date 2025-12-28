@@ -9,6 +9,7 @@ export class SearchPage extends BasePage {
   readonly pageSubtitle: Locator;
   readonly searchInput: Locator;
   readonly categorySelect: Locator;
+  readonly typeSelect: Locator;
   readonly infoAlert: Locator;
   readonly warningAlert: Locator;
   readonly resultsCount: Locator;
@@ -17,9 +18,10 @@ export class SearchPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.pageTitle = page.getByRole('heading', { name: 'Search Contracts', level: 1 });
-    this.pageSubtitle = page.getByText('Search contracts by description and filter by category');
+    this.pageSubtitle = page.getByText('Search contracts by description and filter by category and type');
     this.searchInput = page.getByPlaceholder('Search by description...');
     this.categorySelect = page.locator('#category-select');
+    this.typeSelect = page.locator('#type-select');
     this.infoAlert = page.locator('[role="alert"]').filter({ hasText: 'Start typing to search' });
     this.warningAlert = page.locator('[role="alert"]').filter({ hasText: 'No contracts found' });
     this.resultsCount = page.getByText(/Found \d+ contracts?/);
@@ -56,6 +58,24 @@ export class SearchPage extends BasePage {
     // MUI Select uses a hidden input to store the value
     // Use the name attribute to find the hidden input
     const hiddenInput = this.page.locator('input[name="category"]');
+    return await hiddenInput.inputValue();
+  }
+
+  /**
+   * Select a type from the dropdown
+   */
+  async selectType(type: string) {
+    await this.typeSelect.click();
+    await this.page.getByRole('option', { name: type }).click();
+  }
+
+  /**
+   * Get the currently selected type value
+   */
+  async getSelectedType(): Promise<string> {
+    // MUI Select uses a hidden input to store the value
+    // Use the name attribute to find the hidden input
+    const hiddenInput = this.page.locator('input[name="type"]');
     return await hiddenInput.inputValue();
   }
 

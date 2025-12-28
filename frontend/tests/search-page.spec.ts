@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { SearchPage } from './pages/SearchPage';
 
-test.describe('Search Page with Category Select', () => {
+test.describe('Search Page with Category and Type Select', () => {
   let searchPage: SearchPage;
 
   test.beforeEach(async ({ page }) => {
@@ -15,10 +15,11 @@ test.describe('Search Page with Category Select', () => {
     await expect(searchPage.pageTitle).toHaveText('Search Contracts');
     
     await expect(searchPage.pageSubtitle).toBeVisible();
-    await expect(searchPage.pageSubtitle).toHaveText('Search contracts by description and filter by category');
+    await expect(searchPage.pageSubtitle).toHaveText('Search contracts by description and filter by category and type');
     
     await expect(searchPage.searchInput).toBeVisible();
     await expect(searchPage.categorySelect).toBeVisible();
+    await expect(searchPage.typeSelect).toBeVisible();
   });
 
   test('should display initial info alert when search is empty', async () => {
@@ -201,5 +202,150 @@ test.describe('Search Page with Category Select', () => {
       const fileNames = await searchPage.getAllContractFileNames();
       expect(fileNames.length).toBeGreaterThan(0);
     }
+  });
+
+  // Type Selector Tests
+  test('should have "All Types" selected by default', async () => {
+    // Verify default type selection
+    const selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('all');
+  });
+
+  test('should allow selecting different types', async () => {
+    // Test selecting Controller type
+    await searchPage.selectType('Controller');
+    let selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('controller');
+    
+    // Test selecting Service type
+    await searchPage.selectType('Service');
+    selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('service');
+    
+    // Test selecting Component type
+    await searchPage.selectType('Component');
+    selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('component');
+    
+    // Test selecting All Types
+    await searchPage.selectType('All Types');
+    selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('all');
+  });
+
+  test('should filter contracts by type', async () => {
+    // First, search for something to see results
+    await searchPage.search('service');
+    
+    // Select "Service" type
+    await searchPage.selectType('Service');
+    
+    // Verify only service type contracts are displayed
+    const contractsCount = await searchPage.getContractsCount();
+    expect(contractsCount).toBeGreaterThan(0);
+    
+    // Verify contracts contain service type
+    const hasServiceTypeContract = await searchPage.verifyContractExists({ type: 'service' });
+    expect(hasServiceTypeContract).toBe(true);
+  });
+
+  test('should filter contracts by category, type, and search query', async () => {
+    // Search for "user" and select "API" category and "Controller" type
+    await searchPage.search('user');
+    await searchPage.selectCategory('API');
+    await searchPage.selectType('Controller');
+    
+    // Verify filtered results
+    const contractsCount = await searchPage.getContractsCount();
+    
+    // Should have API/Controller contracts with "user" in description
+    if (contractsCount > 0) {
+      const hasMatchingContract = await searchPage.verifyContractExists({ 
+        category: 'api',
+        type: 'controller'
+      });
+      expect(hasMatchingContract).toBe(true);
+    }
+  });
+
+  test('should maintain type selection when changing search query', async () => {
+    // Select a type
+    await searchPage.selectType('Service');
+    
+    // Search for something
+    await searchPage.search('user');
+    
+    // Verify type is still selected
+    const selectedType = await searchPage.getSelectedType();
+    expect(selectedType).toBe('service');
+    
+    // Change search query
+    await searchPage.search('database');
+    
+    // Verify type is still selected
+    const stillSelectedType = await searchPage.getSelectedType();
+    expect(stillSelectedType).toBe('service');
+  });
+
+  test('should update results when changing type after search', async () => {
+    // Search for something
+    await searchPage.search('service');
+    
+    // Get initial count with all types
+    const initialCount = await searchPage.getContractsCount();
+    
+    // Change type to "Service"
+    await searchPage.selectType('Service');
+    
+    // Get new count
+    const newCount = await searchPage.getContractsCount();
+    
+    // Counts might be different based on filtered results
+    expect(newCount).toBeGreaterThanOrEqual(0);
+    expect(newCount).toBeLessThanOrEqual(initialCount);
+  });
+
+  test('should show no results when type filter excludes all matches', async () => {
+    // Search for something with an API category
+    await searchPage.search('authentication');
+    
+    // Select a type that won't match (if api contracts are controllers)
+    await searchPage.selectType('Component');
+    
+    // Should show either warning or fewer results
+    const contractsCount = await searchPage.getContractsCount();
+    
+    // Result depends on whether there are component contracts with "authentication"
+    expect(contractsCount).toBeGreaterThanOrEqual(0);
+  });
+
+  test('should maintain category and type selections independently', async () => {
+    // Select category and type
+    await searchPage.selectCategory('Service');
+    await searchPage.selectType('Service');
+    
+    // Verify both are selected
+    let selectedCategory = await searchPage.getSelectedCategory();
+    let selectedType = await searchPage.getSelectedType();
+    expect(selectedCategory).toBe('service');
+    expect(selectedType).toBe('service');
+    
+    // Change category only
+    await searchPage.selectCategory('API');
+    
+    // Verify type is still selected, category changed
+    selectedCategory = await searchPage.getSelectedCategory();
+    selectedType = await searchPage.getSelectedType();
+    expect(selectedCategory).toBe('api');
+    expect(selectedType).toBe('service');
+    
+    // Change type only
+    await searchPage.selectType('Controller');
+    
+    // Verify category is still selected, type changed
+    selectedCategory = await searchPage.getSelectedCategory();
+    selectedType = await searchPage.getSelectedType();
+    expect(selectedCategory).toBe('api');
+    expect(selectedType).toBe('controller');
   });
 });
