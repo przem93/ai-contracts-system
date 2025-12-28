@@ -7,11 +7,21 @@
  */
 
 export * from './applyResponseDto';
+export * from './categoriesResponseDto';
 export * from './checkModifiedResponseDto';
 export * from './contractFileDto';
 export * from './contractFileDtoContent';
+export * from './contractTypesResponseDto';
+export * from './contractsControllerSearchByDescriptionParams';
+export * from './dependencyPartDto';
+export * from './incomingDependencyDto';
 export * from './modifiedContractDto';
 export * from './modifiedContractDtoStatus';
+export * from './moduleRelationsResponseDto';
+export * from './moduleSearchResultDto';
+export * from './moduleSearchResultDtoContent';
+export * from './outgoingDependencyDto';
+export * from './searchByDescriptionResponseDto';
 export * from './validationErrorDto';
 export * from './validationFileDto';
 export * from './validationResponseDto';
