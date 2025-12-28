@@ -146,6 +146,7 @@ function SearchPage() {
               <Select
                 labelId="category-select-label"
                 id="category-select"
+                name="category"
                 value={selectedCategory}
                 label="Category"
                 onChange={handleCategoryChange}

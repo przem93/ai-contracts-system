@@ -53,7 +53,10 @@ export class SearchPage extends BasePage {
    * Get the currently selected category value
    */
   async getSelectedCategory(): Promise<string> {
-    return await this.categorySelect.inputValue();
+    // MUI Select uses a hidden input to store the value
+    // Use the name attribute to find the hidden input
+    const hiddenInput = this.page.locator('input[name="category"]');
+    return await hiddenInput.inputValue();
   }
 
   /**
