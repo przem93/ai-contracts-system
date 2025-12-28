@@ -1212,24 +1212,39 @@ describe("ContractsController", () => {
       resultsCount: 3,
       results: [
         {
-          module_id: "auth-service",
-          type: "service",
-          description: "Authentication service for user login",
-          category: "backend",
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash123",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service for user login",
+            category: "backend",
+          },
           similarity: 0.92,
         },
         {
-          module_id: "users-service",
-          type: "service",
-          description: "User management service",
-          category: "backend",
+          fileName: "users-service.yml",
+          filePath: "/contracts/users-service.yml",
+          fileHash: "hash456",
+          content: {
+            id: "users-service",
+            type: "service",
+            description: "User management service",
+            category: "backend",
+          },
           similarity: 0.78,
         },
         {
-          module_id: "login-controller",
-          type: "controller",
-          description: "User login endpoint",
-          category: "api",
+          fileName: "login-controller.yml",
+          filePath: "/contracts/login-controller.yml",
+          fileHash: "hash789",
+          content: {
+            id: "login-controller",
+            type: "controller",
+            description: "User login endpoint",
+            category: "api",
+          },
           similarity: 0.65,
         },
       ],
@@ -1311,10 +1326,14 @@ describe("ContractsController", () => {
       const result = await controller.searchByDescription("user authentication");
 
       result.results.forEach((item) => {
-        expect(item).toHaveProperty("module_id");
-        expect(item).toHaveProperty("type");
-        expect(item).toHaveProperty("description");
-        expect(item).toHaveProperty("category");
+        expect(item).toHaveProperty("fileName");
+        expect(item).toHaveProperty("filePath");
+        expect(item).toHaveProperty("fileHash");
+        expect(item).toHaveProperty("content");
+        expect(item.content).toHaveProperty("id");
+        expect(item.content).toHaveProperty("type");
+        expect(item.content).toHaveProperty("description");
+        expect(item.content).toHaveProperty("category");
         expect(item).toHaveProperty("similarity");
         expect(typeof item.similarity).toBe("number");
         expect(item.similarity).toBeGreaterThan(0);
@@ -1469,10 +1488,15 @@ describe("ContractsController", () => {
         results: Array(10)
           .fill(null)
           .map((_, i) => ({
-            module_id: `service-${i}`,
-            type: "service",
-            description: `Service number ${i}`,
-            category: "backend",
+            fileName: `service-${i}.yml`,
+            filePath: `/contracts/service-${i}.yml`,
+            fileHash: `hash${i}`,
+            content: {
+              id: `service-${i}`,
+              type: "service",
+              description: `Service number ${i}`,
+              category: "backend",
+            },
             similarity: 0.9 - i * 0.05,
           })),
       };

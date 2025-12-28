@@ -1,32 +1,34 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Contract } from "../contract.schema";
 
 /**
  * DTO for a single module search result
+ * Includes full contract information plus similarity score
  */
 export class ModuleSearchResultDto {
   @ApiProperty({
-    description: "The module ID",
-    example: "users-service",
+    description: "The name of the contract file",
+    example: "example-contract.yml",
   })
-  module_id: string;
+  fileName: string;
 
   @ApiProperty({
-    description: "The module type",
-    example: "service",
+    description: "The full path to the contract file",
+    example: "/contracts/example-contract.yml",
   })
-  type: string;
+  filePath: string;
 
   @ApiProperty({
-    description: "The module description",
-    example: "Service for managing user data and authentication",
+    description: "The parsed contract content",
+    type: "object",
   })
-  description: string;
+  content: Contract;
 
   @ApiProperty({
-    description: "The module category",
-    example: "backend",
+    description: "SHA256 hash of the contract file content",
+    example: "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1",
   })
-  category: string;
+  fileHash: string;
 
   @ApiProperty({
     description: "Similarity score (0-1, where 1 is most similar)",

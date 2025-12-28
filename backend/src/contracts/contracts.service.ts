@@ -957,9 +957,6 @@ export class ContractsService implements OnModuleInit {
              ) AS similarity
         WHERE similarity > 0
         RETURN m.module_id AS module_id,
-               m.type AS type,
-               m.description AS description,
-               m.category AS category,
                similarity
         ORDER BY similarity DESC
         LIMIT $limit
@@ -970,14 +967,40 @@ export class ContractsService implements OnModuleInit {
         },
       );
 
-      // Map the results to DTOs
-      const results: ModuleSearchResultDto[] = result.records.map((record) => ({
+      // Extract module IDs and similarity scores from Neo4j results
+      const searchResults = result.records.map((record) => ({
         module_id: record.get("module_id"),
-        type: record.get("type"),
-        description: record.get("description"),
-        category: record.get("category"),
         similarity: record.get("similarity"),
       }));
+
+      // Get all contract files to fetch full contract information
+      const allContracts = await this.getAllContracts();
+
+      // Create a map of module_id to contract file for efficient lookup
+      const contractsMap = new Map<string, ContractFileDto>();
+      allContracts.forEach((contract) => {
+        contractsMap.set(contract.content.id, contract);
+      });
+
+      // Map search results to include full contract information
+      const results: ModuleSearchResultDto[] = searchResults
+        .map((searchResult) => {
+          const contract = contractsMap.get(searchResult.module_id);
+          if (!contract) {
+            this.logger.warn(
+              `Module "${searchResult.module_id}" found in Neo4j but contract file not found`,
+            );
+            return null;
+          }
+          return {
+            fileName: contract.fileName,
+            filePath: contract.filePath,
+            content: contract.content,
+            fileHash: contract.fileHash,
+            similarity: searchResult.similarity,
+          };
+        })
+        .filter((result): result is ModuleSearchResultDto => result !== null);
 
       this.logger.log(
         `Found ${results.length} modules matching query "${query}"`,
