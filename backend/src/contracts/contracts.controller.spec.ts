@@ -1234,24 +1234,39 @@ describe("ContractsController", () => {
       resultsCount: 3,
       results: [
         {
-          module_id: "auth-service",
-          type: "service",
-          description: "Authentication service for user login",
-          category: "backend",
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service for user login",
+            category: "backend",
+          },
           similarity: 0.92,
         },
         {
-          module_id: "users-service",
-          type: "service",
-          description: "User management service",
-          category: "backend",
+          fileName: "users-service.yml",
+          filePath: "/contracts/users-service.yml",
+          fileHash: "hash2",
+          content: {
+            id: "users-service",
+            type: "service",
+            description: "User management service",
+            category: "backend",
+          },
           similarity: 0.78,
         },
         {
-          module_id: "login-controller",
-          type: "controller",
-          description: "User login endpoint",
-          category: "api",
+          fileName: "login-controller.yml",
+          filePath: "/contracts/login-controller.yml",
+          fileHash: "hash3",
+          content: {
+            id: "login-controller",
+            type: "controller",
+            description: "User login endpoint",
+            category: "api",
+          },
           similarity: 0.65,
         },
       ],
@@ -1492,9 +1507,13 @@ describe("ContractsController", () => {
     it("should handle long queries", async () => {
       const longQuery =
         "This is a very long query describing a complex module that handles user authentication, authorization, session management, and token validation with advanced security features";
+      const mockLongQueryResults = {
+        ...mockSearchResults,
+        query: longQuery,
+      };
       jest
         .spyOn(service, "searchByDescription")
-        .mockResolvedValue({ ...mockSearchResults, query: longQuery });
+        .mockResolvedValue(mockLongQueryResults);
 
       const result = await controller.searchByDescription(longQuery);
 
@@ -1527,9 +1546,13 @@ describe("ContractsController", () => {
 
     it("should return query exactly as provided", async () => {
       const query = "  USER Authentication  ";
+      const mockQueryResults = {
+        ...mockSearchResults,
+        query,
+      };
       jest
         .spyOn(service, "searchByDescription")
-        .mockResolvedValue({ ...mockSearchResults, query });
+        .mockResolvedValue(mockQueryResults);
 
       const result = await controller.searchByDescription(query);
 
