@@ -124,6 +124,93 @@
           "contracts"
         ]
       }
+    },
+    "/api/contracts/{module_id}/relations": {
+      "get": {
+        "operationId": "ContractsController_getModuleRelations",
+        "summary": "Get relations for a specific module",
+        "description": "Returns outgoing dependencies (modules this module depends on) and incoming dependencies (modules that depend on this module) with the parts they use",
+        "parameters": [
+          {
+            "name": "module_id",
+            "required": true,
+            "in": "path",
+            "description": "The module ID to get relations for",
+            "schema": {
+              "example": "users-service",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns module relations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModuleRelationsResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Module not found"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
+    "/api/contracts/search": {
+      "get": {
+        "operationId": "ContractsController_searchByDescription",
+        "summary": "Search modules by description using semantic similarity",
+        "description": "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.",
+        "parameters": [
+          {
+            "name": "query",
+            "required": true,
+            "in": "query",
+            "description": "The search query text to find similar modules",
+            "schema": {
+              "example": "user authentication service",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum number of results to return (default: 10)",
+            "schema": {
+              "example": 10,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Returns search results ordered by similarity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchByDescriptionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid search query (empty or missing)"
+          },
+          "500": {
+            "description": "Failed to perform search (embedding service not ready or Neo4j error)"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
     }
   },
   "info": {
@@ -152,12 +239,18 @@
           "content": {
             "type": "object",
             "description": "The parsed contract content"
+          },
+          "fileHash": {
+            "type": "string",
+            "description": "SHA256 hash of the contract file content",
+            "example": "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1"
           }
         },
         "required": [
           "fileName",
           "filePath",
-          "content"
+          "content",
+          "fileHash"
         ]
       },
       "ValidationErrorDto": {
@@ -232,37 +325,6 @@
           "files"
         ]
       },
-      "ApplyResponseDto": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Whether the operation was successful",
-            "example": true
-          },
-          "modulesProcessed": {
-            "type": "number",
-            "description": "Number of modules processed",
-            "example": 5
-          },
-          "partsProcessed": {
-            "type": "number",
-            "description": "Number of parts processed",
-            "example": 12
-          },
-          "message": {
-            "type": "string",
-            "description": "Success or error message",
-            "example": "Successfully applied 5 modules and 12 parts to Neo4j"
-          }
-        },
-        "required": [
-          "success",
-          "modulesProcessed",
-          "partsProcessed",
-          "message"
-        ]
-      },
       "ModifiedContractDto": {
         "type": "object",
         "properties": {
@@ -296,7 +358,11 @@
             "type": "string",
             "description": "The status of the contract: 'modified', 'added', or 'removed'",
             "example": "modified",
-            "enum": ["modified", "added", "removed"]
+            "enum": [
+              "modified",
+              "added",
+              "removed"
+            ]
           }
         },
         "required": [
@@ -336,8 +402,8 @@
             "example": 0
           },
           "changes": {
-            "type": "array",
             "description": "List of contracts that have been modified, added, or removed",
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/ModifiedContractDto"
             }
@@ -350,6 +416,191 @@
           "addedCount",
           "removedCount",
           "changes"
+        ]
+      },
+      "ApplyResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the operation was successful",
+            "example": true
+          },
+          "modulesProcessed": {
+            "type": "number",
+            "description": "Number of modules processed",
+            "example": 5
+          },
+          "partsProcessed": {
+            "type": "number",
+            "description": "Number of parts processed",
+            "example": 12
+          },
+          "message": {
+            "type": "string",
+            "description": "Success or error message",
+            "example": "Successfully applied 5 modules and 12 parts to Neo4j"
+          }
+        },
+        "required": [
+          "success",
+          "modulesProcessed",
+          "partsProcessed",
+          "message"
+        ]
+      },
+      "DependencyPartDto": {
+        "type": "object",
+        "properties": {
+          "part_id": {
+            "type": "string",
+            "description": "Part ID",
+            "example": "getUserById"
+          },
+          "type": {
+            "type": "string",
+            "description": "Part type",
+            "example": "function"
+          }
+        },
+        "required": [
+          "part_id",
+          "type"
+        ]
+      },
+      "OutgoingDependencyDto": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "description": "Module ID that this module depends on",
+            "example": "users-service"
+          },
+          "parts": {
+            "description": "Parts from the dependency module that this module uses",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyPartDto"
+            }
+          }
+        },
+        "required": [
+          "module_id",
+          "parts"
+        ]
+      },
+      "IncomingDependencyDto": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "description": "Module ID that depends on this module",
+            "example": "users-controller"
+          },
+          "parts": {
+            "description": "Parts from this module that the dependent module uses",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependencyPartDto"
+            }
+          }
+        },
+        "required": [
+          "module_id",
+          "parts"
+        ]
+      },
+      "ModuleRelationsResponseDto": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "description": "The module ID being queried",
+            "example": "users-service"
+          },
+          "outgoing_dependencies": {
+            "description": "Outgoing dependencies - modules that this module depends on",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutgoingDependencyDto"
+            }
+          },
+          "incoming_dependencies": {
+            "description": "Incoming dependencies - modules that depend on this module and which parts they use",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncomingDependencyDto"
+            }
+          }
+        },
+        "required": [
+          "module_id",
+          "outgoing_dependencies",
+          "incoming_dependencies"
+        ]
+      },
+      "ModuleSearchResultDto": {
+        "type": "object",
+        "properties": {
+          "module_id": {
+            "type": "string",
+            "description": "The module ID",
+            "example": "users-service"
+          },
+          "type": {
+            "type": "string",
+            "description": "The module type",
+            "example": "service"
+          },
+          "description": {
+            "type": "string",
+            "description": "The module description",
+            "example": "Service for managing user data and authentication"
+          },
+          "category": {
+            "type": "string",
+            "description": "The module category",
+            "example": "backend"
+          },
+          "similarity": {
+            "type": "number",
+            "description": "Similarity score (0-1, where 1 is most similar)",
+            "example": 0.85
+          }
+        },
+        "required": [
+          "module_id",
+          "type",
+          "description",
+          "category",
+          "similarity"
+        ]
+      },
+      "SearchByDescriptionResponseDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query that was used",
+            "example": "authentication service"
+          },
+          "resultsCount": {
+            "type": "number",
+            "description": "Number of results returned",
+            "example": 5
+          },
+          "results": {
+            "description": "Array of module search results ordered by similarity (highest first)",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleSearchResultDto"
+            }
+          }
+        },
+        "required": [
+          "query",
+          "resultsCount",
+          "results"
         ]
       }
     }

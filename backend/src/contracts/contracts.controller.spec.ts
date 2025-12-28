@@ -69,6 +69,7 @@ describe("ContractsController", () => {
             applyContractsToNeo4j: jest.fn(),
             checkIfContractsModified: jest.fn(),
             getModuleRelations: jest.fn(),
+            searchByDescription: jest.fn(),
           },
         },
       ],
@@ -1202,6 +1203,300 @@ describe("ContractsController", () => {
       expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("type");
       expect(result.incoming_dependencies[0].parts[0].part_id).toBe("findUser");
       expect(result.incoming_dependencies[0].parts[0].type).toBe("function");
+    });
+  });
+
+  describe("searchByDescription", () => {
+    const mockSearchResults = {
+      query: "user authentication",
+      resultsCount: 3,
+      results: [
+        {
+          module_id: "auth-service",
+          type: "service",
+          description: "Authentication service for user login",
+          category: "backend",
+          similarity: 0.92,
+        },
+        {
+          module_id: "users-service",
+          type: "service",
+          description: "User management service",
+          category: "backend",
+          similarity: 0.78,
+        },
+        {
+          module_id: "login-controller",
+          type: "controller",
+          description: "User login endpoint",
+          category: "api",
+          similarity: 0.65,
+        },
+      ],
+    };
+
+    it("should return search results for a valid query", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
+
+      const result = await controller.searchByDescription("user authentication");
+
+      expect(result).toEqual(mockSearchResults);
+      expect(result.query).toBe("user authentication");
+      expect(result.resultsCount).toBe(3);
+      expect(result.results).toHaveLength(3);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        10,
+      );
+    });
+
+    it("should return search results with custom limit", async () => {
+      const mockCustomResults = {
+        ...mockSearchResults,
+        resultsCount: 2,
+        results: mockSearchResults.results.slice(0, 2),
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockCustomResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        "5",
+      );
+
+      expect(result).toEqual(mockCustomResults);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        5,
+      );
+    });
+
+    it("should use default limit when not provided", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
+
+      await controller.searchByDescription("user authentication");
+
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        10,
+      );
+    });
+
+    it("should return results ordered by similarity (highest first)", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
+
+      const result = await controller.searchByDescription("user authentication");
+
+      // Verify results are ordered by similarity descending
+      for (let i = 0; i < result.results.length - 1; i++) {
+        expect(result.results[i].similarity).toBeGreaterThanOrEqual(
+          result.results[i + 1].similarity,
+        );
+      }
+    });
+
+    it("should include all required fields in search results", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
+
+      const result = await controller.searchByDescription("user authentication");
+
+      result.results.forEach((item) => {
+        expect(item).toHaveProperty("module_id");
+        expect(item).toHaveProperty("type");
+        expect(item).toHaveProperty("description");
+        expect(item).toHaveProperty("category");
+        expect(item).toHaveProperty("similarity");
+        expect(typeof item.similarity).toBe("number");
+        expect(item.similarity).toBeGreaterThan(0);
+        expect(item.similarity).toBeLessThanOrEqual(1);
+      });
+    });
+
+    it("should return empty results when no matches found", async () => {
+      const mockEmptyResults = {
+        query: "nonexistent module",
+        resultsCount: 0,
+        results: [],
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockEmptyResults);
+
+      const result = await controller.searchByDescription("nonexistent module");
+
+      expect(result.resultsCount).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it("should throw BadRequestException for empty query", async () => {
+      await expect(controller.searchByDescription("")).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for whitespace-only query", async () => {
+      await expect(controller.searchByDescription("   ")).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for invalid limit (not a number)", async () => {
+      await expect(
+        controller.searchByDescription("test query", "invalid"),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for negative limit", async () => {
+      await expect(
+        controller.searchByDescription("test query", "-5"),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for zero limit", async () => {
+      await expect(
+        controller.searchByDescription("test query", "0"),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should throw BadRequestException for limit exceeding 100", async () => {
+      await expect(
+        controller.searchByDescription("test query", "101"),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(service.searchByDescription).not.toHaveBeenCalled();
+    });
+
+    it("should accept limit of 100", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
+
+      await controller.searchByDescription("test query", "100");
+
+      expect(service.searchByDescription).toHaveBeenCalledWith("test query", 100);
+    });
+
+    it("should throw InternalServerErrorException when embedding service is not ready", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockRejectedValue(
+          new Error("Embedding service is not ready. Cannot perform semantic search."),
+        );
+
+      await expect(
+        controller.searchByDescription("test query"),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(service.searchByDescription).toHaveBeenCalledWith("test query", 10);
+    });
+
+    it("should throw InternalServerErrorException for Neo4j errors", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockRejectedValue(new Error("Neo4j connection failed"));
+
+      await expect(
+        controller.searchByDescription("test query"),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it("should propagate service errors with proper message", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockRejectedValue(new Error("Database timeout"));
+
+      try {
+        await controller.searchByDescription("test query");
+        fail("Should have thrown InternalServerErrorException");
+      } catch (error) {
+        expect(error).toBeInstanceOf(InternalServerErrorException);
+        expect(error.message).toContain("Failed to search modules");
+      }
+    });
+
+    it("should handle queries with special characters", async () => {
+      const queryWithSpecialChars = "user's authentication & authorization";
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue({ ...mockSearchResults, query: queryWithSpecialChars });
+
+      const result = await controller.searchByDescription(queryWithSpecialChars);
+
+      expect(result.query).toBe(queryWithSpecialChars);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        queryWithSpecialChars,
+        10,
+      );
+    });
+
+    it("should handle long queries", async () => {
+      const longQuery = "This is a very long query describing a complex module that handles user authentication, authorization, session management, and token validation with advanced security features";
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue({ ...mockSearchResults, query: longQuery });
+
+      const result = await controller.searchByDescription(longQuery);
+
+      expect(result.query).toBe(longQuery);
+      expect(service.searchByDescription).toHaveBeenCalledWith(longQuery, 10);
+    });
+
+    it("should handle queries with multiple modules in results", async () => {
+      const manyResults = {
+        query: "service",
+        resultsCount: 10,
+        results: Array(10)
+          .fill(null)
+          .map((_, i) => ({
+            module_id: `service-${i}`,
+            type: "service",
+            description: `Service number ${i}`,
+            category: "backend",
+            similarity: 0.9 - i * 0.05,
+          })),
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(manyResults);
+
+      const result = await controller.searchByDescription("service");
+
+      expect(result.resultsCount).toBe(10);
+      expect(result.results).toHaveLength(10);
+    });
+
+    it("should return query exactly as provided", async () => {
+      const query = "  USER Authentication  ";
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue({ ...mockSearchResults, query });
+
+      const result = await controller.searchByDescription(query);
+
+      // Note: Controller validates trimmed query, but passes original to service
+      expect(service.searchByDescription).toHaveBeenCalledWith(query, 10);
     });
   });
 });

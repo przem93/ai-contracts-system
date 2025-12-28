@@ -5,6 +5,7 @@ import * as path from "path";
 import * as crypto from "crypto";
 import * as yaml from "js-yaml";
 import { glob } from "glob";
+import { int as neo4jInt } from "neo4j-driver";
 import { ContractSchema, Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { Neo4jService } from "../neo4j/neo4j.service";
@@ -19,6 +20,10 @@ import {
   IncomingDependencyDto,
   DependencyPartDto,
 } from "./dto/module-relations-response.dto";
+import {
+  SearchByDescriptionResponseDto,
+  ModuleSearchResultDto,
+} from "./dto/search-by-description-response.dto";
 
 @Injectable()
 export class ContractsService implements OnModuleInit {
@@ -900,6 +905,97 @@ export class ContractsService implements OnModuleInit {
         error.message,
       );
       throw error;
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Search for modules by description using embedding similarity
+   * @param query The search query text
+   * @param limit Maximum number of results to return (default: 10)
+   * @returns Object with search results ordered by similarity
+   */
+  async searchByDescription(
+    query: string,
+    limit: number = 10,
+  ): Promise<SearchByDescriptionResponseDto> {
+    // Validate input
+    if (!query || query.trim().length === 0) {
+      throw new Error("Search query cannot be empty");
+    }
+
+    // Check if embedding service is ready
+    if (!this.embeddingService.isReady()) {
+      throw new Error(
+        "Embedding service is not ready. Cannot perform semantic search.",
+      );
+    }
+
+    const session = this.neo4jService.getSession();
+
+    try {
+      // Generate embedding for the search query
+      this.logger.log(`Generating embedding for search query: "${query}"`);
+      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+      this.logger.log(
+        `Generated query embedding with ${queryEmbedding.length} dimensions`,
+      );
+
+      // Perform vector similarity search in Neo4j
+      // Neo4j doesn't have built-in cosine similarity for lists, so we'll calculate it manually
+      // We use the formula: cosine_similarity = dot_product / (norm_a * norm_b)
+      // Since our embeddings are already normalized (normalize: true in embedding generation),
+      // we can use dot product directly as cosine similarity
+      const result = await session.run(
+        `
+        MATCH (m:Module)
+        WHERE m.embedding IS NOT NULL
+        WITH m, 
+             reduce(dot = 0.0, i IN range(0, size(m.embedding)-1) | 
+               dot + m.embedding[i] * $queryEmbedding[i]
+             ) AS similarity
+        WHERE similarity > 0
+        RETURN m.module_id AS module_id,
+               m.type AS type,
+               m.description AS description,
+               m.category AS category,
+               similarity
+        ORDER BY similarity DESC
+        LIMIT $limit
+        `,
+        {
+          queryEmbedding,
+          limit: neo4jInt(limit),
+        },
+      );
+
+      // Map the results to DTOs
+      const results: ModuleSearchResultDto[] = result.records.map((record) => ({
+        module_id: record.get("module_id"),
+        type: record.get("type"),
+        description: record.get("description"),
+        category: record.get("category"),
+        similarity: record.get("similarity"),
+      }));
+
+      this.logger.log(
+        `Found ${results.length} modules matching query "${query}"`,
+      );
+
+      return {
+        query,
+        resultsCount: results.length,
+        results,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error searching modules by description for query "${query}":`,
+        error.message,
+      );
+      throw new Error(
+        `Failed to search modules by description: ${error.message}`,
+      );
     } finally {
       await session.close();
     }
