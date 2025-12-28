@@ -48,6 +48,31 @@
         ]
       }
     },
+    "/api/contracts/types": {
+      "get": {
+        "operationId": "ContractsController_getContractTypes",
+        "summary": "Get all unique contract types",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Returns all unique contract types found in the system",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractTypesResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to retrieve contract types"
+          }
+        },
+        "tags": [
+          "contracts"
+        ]
+      }
+    },
     "/api/contracts/validate": {
       "get": {
         "operationId": "ContractsController_validateContracts",
@@ -251,6 +276,32 @@
           "filePath",
           "content",
           "fileHash"
+        ]
+      },
+      "ContractTypesResponseDto": {
+        "type": "object",
+        "properties": {
+          "types": {
+            "description": "Array of unique contract types found in the system",
+            "example": [
+              "controller",
+              "service",
+              "component"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "count": {
+            "type": "number",
+            "description": "Total count of unique contract types",
+            "example": 3
+          }
+        },
+        "required": [
+          "types",
+          "count"
         ]
       },
       "ValidationErrorDto": {

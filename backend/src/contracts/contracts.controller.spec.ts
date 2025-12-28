@@ -1538,6 +1538,197 @@ describe("ContractsController", () => {
     });
   });
 
+  describe("getContractTypes", () => {
+    it("should return all unique contract types", async () => {
+      const mockTypesResult = {
+        types: ["controller", "service", "component"],
+        count: 3,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result).toEqual(mockTypesResult);
+      expect(result.types).toHaveLength(3);
+      expect(result.count).toBe(3);
+      expect(service.getContractTypes).toHaveBeenCalled();
+    });
+
+    it("should return sorted types alphabetically", async () => {
+      const mockTypesResult = {
+        types: ["component", "controller", "service"],
+        count: 3,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      // Verify types are sorted
+      const sortedTypes = [...result.types].sort();
+      expect(result.types).toEqual(sortedTypes);
+    });
+
+    it("should return empty array when no contracts exist", async () => {
+      const mockEmptyResult = {
+        types: [],
+        count: 0,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockEmptyResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result.types).toEqual([]);
+      expect(result.count).toBe(0);
+    });
+
+    it("should return unique types without duplicates", async () => {
+      const mockTypesResult = {
+        types: ["controller", "service"],
+        count: 2,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      // Check for uniqueness
+      const uniqueTypes = new Set(result.types);
+      expect(uniqueTypes.size).toBe(result.types.length);
+    });
+
+    it("should include all expected type fields in response", async () => {
+      const mockTypesResult = {
+        types: ["controller", "service", "component", "repository"],
+        count: 4,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result).toHaveProperty("types");
+      expect(result).toHaveProperty("count");
+      expect(Array.isArray(result.types)).toBe(true);
+      expect(typeof result.count).toBe("number");
+    });
+
+    it("should return count matching types array length", async () => {
+      const mockTypesResult = {
+        types: ["controller", "service", "component"],
+        count: 3,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result.count).toBe(result.types.length);
+    });
+
+    it("should handle single type correctly", async () => {
+      const mockTypesResult = {
+        types: ["service"],
+        count: 1,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result.types).toHaveLength(1);
+      expect(result.types[0]).toBe("service");
+      expect(result.count).toBe(1);
+    });
+
+    it("should handle many types correctly", async () => {
+      const manyTypes = Array.from({ length: 20 }, (_, i) => `type-${i}`);
+      const mockTypesResult = {
+        types: manyTypes,
+        count: 20,
+      };
+
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      const result = await controller.getContractTypes();
+
+      expect(result.types).toHaveLength(20);
+      expect(result.count).toBe(20);
+    });
+
+    it("should throw InternalServerErrorException when service fails", async () => {
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockRejectedValue(new Error("Failed to get contract types"));
+
+      await expect(controller.getContractTypes()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(service.getContractTypes).toHaveBeenCalled();
+    });
+
+    it("should include error details in InternalServerErrorException", async () => {
+      const errorMessage = "Database connection failed";
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockRejectedValue(new Error(errorMessage));
+
+      try {
+        await controller.getContractTypes();
+        fail("Should have thrown InternalServerErrorException");
+      } catch (error) {
+        expect(error).toBeInstanceOf(InternalServerErrorException);
+        expect(error.message).toContain("Failed to get contract types");
+        expect(error.message).toContain(errorMessage);
+      }
+    });
+
+    it("should propagate service errors properly", async () => {
+      jest
+        .spyOn(service, "getContractTypes")
+        .mockRejectedValue(new Error("CONTRACTS_PATH not set"));
+
+      await expect(controller.getContractTypes()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    it("should verify service method is called without parameters", async () => {
+      const mockTypesResult = {
+        types: ["controller"],
+        count: 1,
+      };
+
+      const getContractTypesSpy = jest
+        .spyOn(service, "getContractTypes")
+        .mockResolvedValue(mockTypesResult);
+
+      await controller.getContractTypes();
+
+      expect(getContractTypesSpy).toHaveBeenCalledWith();
+      expect(getContractTypesSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("getCategories", () => {
     it("should return list of categories", async () => {
       const mockCategoriesResult = {
