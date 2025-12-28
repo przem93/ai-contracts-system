@@ -1528,10 +1528,15 @@ describe("ContractsController", () => {
         results: Array(10)
           .fill(null)
           .map((_, i) => ({
-            module_id: `service-${i}`,
-            type: "service",
-            description: `Service number ${i}`,
-            category: "backend",
+            fileName: `service-${i}.yml`,
+            filePath: `/contracts/service-${i}.yml`,
+            fileHash: `hash${i}`,
+            content: {
+              id: `service-${i}`,
+              type: "service",
+              description: `Service number ${i}`,
+              category: "backend",
+            },
             similarity: 0.9 - i * 0.05,
           })),
       };

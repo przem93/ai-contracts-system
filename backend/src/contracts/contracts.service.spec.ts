@@ -3135,7 +3135,7 @@ describe("ContractsService", () => {
       expect(result.results).toHaveLength(5);
       // Verify all modules are correctly mapped
       result.results.forEach((res, i) => {
-        expect(res.module_id).toBe(`service-${i}`);
+        expect(res.content.id).toBe(`service-${i}`);
         expect(res.similarity).toBe(0.9 - i * 0.1);
       });
     });
