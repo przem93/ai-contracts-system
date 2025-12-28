@@ -1,0 +1,21 @@
+id: post-component
+type: ui
+description: Post component for the frontend
+category: component
+parts:
+  - id: id
+    type: string
+  - id: name
+    type: string
+  - id: description
+    type: string
+  - id: image
+    type: string
+  - id: likes
+    type: number
+  - id: comments
+    type: array
+    items:
+      type: object
+      properties:
+        id:
