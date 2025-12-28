@@ -17,16 +17,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useState, useMemo } from 'react';
 import ContractCard from '../components/ContractCard';
-import { useContractsControllerGetContractTypes } from '../api/generated/contracts/contracts';
-
-// Mock categories
-const mockCategories = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'api', label: 'API' },
-  { value: 'service', label: 'Service' },
-  { value: 'frontend', label: 'Frontend' },
-  { value: 'component', label: 'Component' }
-];
+import { useContractsControllerGetContractTypes, useContractsControllerGetCategories } from '../api/generated/contracts/contracts';
 
 // Mock data for search results
 const mockContracts = [
@@ -80,6 +71,9 @@ function SearchPage() {
   // Fetch contract types from API
   const { data: typesData, isLoading: isLoadingTypes, isError: isErrorTypes } = useContractsControllerGetContractTypes();
 
+  // Fetch contract categories from API
+  const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
+
   // Transform types data into select options
   const typeOptions = useMemo(() => {
     const allTypesOption = { value: 'all', label: 'All Types' };
@@ -95,6 +89,22 @@ function SearchPage() {
 
     return [allTypesOption, ...apiTypes];
   }, [typesData]);
+
+  // Transform categories data into select options
+  const categoryOptions = useMemo(() => {
+    const allCategoriesOption = { value: 'all', label: 'All Categories' };
+    
+    if (!categoriesData?.categories || categoriesData.categories.length === 0) {
+      return [allCategoriesOption];
+    }
+
+    const apiCategories = categoriesData.categories.map(category => ({
+      value: category,
+      label: category.charAt(0).toUpperCase() + category.slice(1) // Capitalize first letter
+    }));
+
+    return [allCategoriesOption, ...apiCategories];
+  }, [categoriesData]);
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
     setSelectedCategory(event.target.value);
@@ -168,6 +178,7 @@ function SearchPage() {
                   backgroundColor: 'background.paper',
                 }
               }}
+              disabled={isLoadingCategories}
             >
               <InputLabel id="category-select-label">Category</InputLabel>
               <Select
@@ -179,11 +190,11 @@ function SearchPage() {
                 onChange={handleCategoryChange}
                 startAdornment={
                   <InputAdornment position="start">
-                    <FilterListIcon />
+                    {isLoadingCategories ? <CircularProgress size={20} /> : <FilterListIcon />}
                   </InputAdornment>
                 }
               >
-                {mockCategories.map((category) => (
+                {categoryOptions.map((category) => (
                   <MenuItem key={category.value} value={category.value}>
                     {category.label}
                   </MenuItem>
@@ -224,7 +235,12 @@ function SearchPage() {
             </FormControl>
           </Box>
 
-          {/* Error Alert for Types API */}
+          {/* Error Alerts for API failures */}
+          {isErrorCategories && (
+            <Alert severity="error">
+              Failed to load contract categories. Using default options.
+            </Alert>
+          )}
           {isErrorTypes && (
             <Alert severity="error">
               Failed to load contract types. Using default options.
