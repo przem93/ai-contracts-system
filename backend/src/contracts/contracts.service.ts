@@ -953,11 +953,15 @@ export class ContractsService implements OnModuleInit {
    * Search for modules by description using embedding similarity
    * @param query The search query text
    * @param limit Maximum number of results to return (default: 10)
+   * @param type Optional filter by contract type
+   * @param category Optional filter by contract category
    * @returns Object with search results ordered by similarity
    */
   async searchByDescription(
     query: string,
     limit: number = 10,
+    type?: string,
+    category?: string,
   ): Promise<SearchByDescriptionResponseDto> {
     // Validate input
     if (!query || query.trim().length === 0) {
@@ -982,6 +986,25 @@ export class ContractsService implements OnModuleInit {
         `Generated query embedding with ${queryEmbedding.length} dimensions`,
       );
 
+      // Build WHERE clause for filters
+      const whereConditions = ["m.embedding IS NOT NULL"];
+      const parameters: any = {
+        queryEmbedding,
+        limit: neo4jInt(limit),
+      };
+
+      if (type) {
+        whereConditions.push("m.type = $type");
+        parameters.type = type;
+      }
+
+      if (category) {
+        whereConditions.push("m.category = $category");
+        parameters.category = category;
+      }
+
+      const whereClause = whereConditions.join(" AND ");
+
       // Perform vector similarity search in Neo4j
       // Neo4j doesn't have built-in cosine similarity for lists, so we'll calculate it manually
       // We use the formula: cosine_similarity = dot_product / (norm_a * norm_b)
@@ -990,7 +1013,7 @@ export class ContractsService implements OnModuleInit {
       const result = await session.run(
         `
         MATCH (m:Module)
-        WHERE m.embedding IS NOT NULL
+        WHERE ${whereClause}
         WITH m, 
              reduce(dot = 0.0, i IN range(0, size(m.embedding)-1) | 
                dot + m.embedding[i] * $queryEmbedding[i]
@@ -1001,10 +1024,7 @@ export class ContractsService implements OnModuleInit {
         ORDER BY similarity DESC
         LIMIT $limit
         `,
-        {
-          queryEmbedding,
-          limit: neo4jInt(limit),
-        },
+        parameters,
       );
 
       // Extract module IDs and similarity scores from Neo4j results
@@ -1042,8 +1062,13 @@ export class ContractsService implements OnModuleInit {
         })
         .filter((result): result is ModuleSearchResultDto => result !== null);
 
+      const filterInfo = [];
+      if (type) filterInfo.push(`type: ${type}`);
+      if (category) filterInfo.push(`category: ${category}`);
+      const filterStr = filterInfo.length > 0 ? ` (filters: ${filterInfo.join(", ")})` : "";
+
       this.logger.log(
-        `Found ${results.length} modules matching query "${query}"`,
+        `Found ${results.length} modules matching query "${query}"${filterStr}`,
       );
 
       return {

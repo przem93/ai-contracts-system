@@ -1289,6 +1289,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
         10,
+        undefined,
+        undefined,
       );
     });
 
@@ -1312,6 +1314,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
         5,
+        undefined,
+        undefined,
       );
     });
 
@@ -1325,6 +1329,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
         10,
+        undefined,
+        undefined,
       );
     });
 
@@ -1445,6 +1451,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "test query",
         100,
+        undefined,
+        undefined,
       );
     });
 
@@ -1464,6 +1472,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "test query",
         10,
+        undefined,
+        undefined,
       );
     });
 
@@ -1506,6 +1516,8 @@ describe("ContractsController", () => {
       expect(service.searchByDescription).toHaveBeenCalledWith(
         queryWithSpecialChars,
         10,
+        undefined,
+        undefined,
       );
     });
 
@@ -1523,7 +1535,12 @@ describe("ContractsController", () => {
       const result = await controller.searchByDescription(longQuery);
 
       expect(result.query).toBe(longQuery);
-      expect(service.searchByDescription).toHaveBeenCalledWith(longQuery, 10);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        longQuery,
+        10,
+        undefined,
+        undefined,
+      );
     });
 
     it("should handle queries with multiple modules in results", async () => {
@@ -1567,7 +1584,140 @@ describe("ContractsController", () => {
       const result = await controller.searchByDescription(query);
 
       // Note: Controller validates trimmed query, but passes original to service
-      expect(service.searchByDescription).toHaveBeenCalledWith(query, 10);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        query,
+        10,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should filter by type when type parameter is provided", async () => {
+      const mockFilteredResults = {
+        ...mockSearchResults,
+        resultsCount: 1,
+        results: [mockSearchResults.results[0]],
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockFilteredResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        undefined,
+        "service",
+      );
+
+      expect(result).toEqual(mockFilteredResults);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        10,
+        "service",
+        undefined,
+      );
+    });
+
+    it("should filter by category when category parameter is provided", async () => {
+      const mockFilteredResults = {
+        ...mockSearchResults,
+        resultsCount: 2,
+        results: mockSearchResults.results.slice(0, 2),
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockFilteredResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        undefined,
+        undefined,
+        "backend",
+      );
+
+      expect(result).toEqual(mockFilteredResults);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        10,
+        undefined,
+        "backend",
+      );
+    });
+
+    it("should filter by both type and category when both parameters are provided", async () => {
+      const mockFilteredResults = {
+        ...mockSearchResults,
+        resultsCount: 1,
+        results: [mockSearchResults.results[0]],
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockFilteredResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        undefined,
+        "service",
+        "backend",
+      );
+
+      expect(result).toEqual(mockFilteredResults);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        10,
+        "service",
+        "backend",
+      );
+    });
+
+    it("should filter with custom limit and filters", async () => {
+      const mockFilteredResults = {
+        ...mockSearchResults,
+        resultsCount: 1,
+        results: [mockSearchResults.results[0]],
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockFilteredResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        "20",
+        "service",
+        "backend",
+      );
+
+      expect(result).toEqual(mockFilteredResults);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "user authentication",
+        20,
+        "service",
+        "backend",
+      );
+    });
+
+    it("should return empty results when filters match no modules", async () => {
+      const mockEmptyResults = {
+        query: "user authentication",
+        resultsCount: 0,
+        results: [],
+      };
+
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockEmptyResults);
+
+      const result = await controller.searchByDescription(
+        "user authentication",
+        undefined,
+        "nonexistent-type",
+      );
+
+      expect(result.resultsCount).toBe(0);
+      expect(result.results).toEqual([]);
     });
   });
 

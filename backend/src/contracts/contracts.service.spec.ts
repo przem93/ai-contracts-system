@@ -3209,6 +3209,261 @@ describe("ContractsService", () => {
 
       expect(mockSession.close).toHaveBeenCalled();
     });
+
+    it("should filter by type when type parameter is provided", async () => {
+      const query = "authentication";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+              similarity: 0.92,
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(query, 10, "service");
+
+      expect(result).toBeDefined();
+      expect(result.resultsCount).toBe(1);
+      expect(result.results[0].content.type).toBe("service");
+
+      // Verify Neo4j query includes type filter
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.type = $type"),
+        expect.objectContaining({
+          queryEmbedding: mockEmbedding,
+          limit: neo4jInt(10),
+          type: "service",
+        }),
+      );
+    });
+
+    it("should filter by category when category parameter is provided", async () => {
+      const query = "authentication";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+              similarity: 0.92,
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        query,
+        10,
+        undefined,
+        "backend",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.resultsCount).toBe(1);
+      expect(result.results[0].content.category).toBe("backend");
+
+      // Verify Neo4j query includes category filter
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.category = $category"),
+        expect.objectContaining({
+          queryEmbedding: mockEmbedding,
+          limit: neo4jInt(10),
+          category: "backend",
+        }),
+      );
+    });
+
+    it("should filter by both type and category when both parameters are provided", async () => {
+      const query = "authentication";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+      const mockResults = [
+        {
+          get: (field: string) => {
+            const data = {
+              module_id: "auth-service",
+              similarity: 0.92,
+            };
+            return data[field];
+          },
+        },
+      ];
+
+      const mockContracts = [
+        {
+          fileName: "auth-service.yml",
+          filePath: "/contracts/auth-service.yml",
+          fileHash: "hash1",
+          content: {
+            id: "auth-service",
+            type: "service",
+            description: "Authentication service",
+            category: "backend",
+          },
+        },
+      ];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
+
+      const result = await service.searchByDescription(
+        query,
+        10,
+        "service",
+        "backend",
+      );
+
+      expect(result).toBeDefined();
+      expect(result.resultsCount).toBe(1);
+      expect(result.results[0].content.type).toBe("service");
+      expect(result.results[0].content.category).toBe("backend");
+
+      // Verify Neo4j query includes both filters
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.type = $type"),
+        expect.objectContaining({
+          queryEmbedding: mockEmbedding,
+          limit: neo4jInt(10),
+          type: "service",
+          category: "backend",
+        }),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("m.category = $category"),
+        expect.any(Object),
+      );
+    });
+
+    it("should return empty results when filters match no modules", async () => {
+      const query = "authentication";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      const result = await service.searchByDescription(
+        query,
+        10,
+        "nonexistent-type",
+        "nonexistent-category",
+      );
+
+      expect(result.resultsCount).toBe(0);
+      expect(result.results).toEqual([]);
+    });
+
+    it("should not add type filter to query when type is undefined", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10, undefined, undefined);
+
+      // Verify the query doesn't contain type filter
+      const queryString = mockSession.run.mock.calls[0][0];
+      expect(queryString).not.toContain("m.type = $type");
+
+      // Verify parameters don't contain type
+      const params = mockSession.run.mock.calls[0][1];
+      expect(params).not.toHaveProperty("type");
+    });
+
+    it("should not add category filter to query when category is undefined", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10, undefined, undefined);
+
+      // Verify the query doesn't contain category filter
+      const queryString = mockSession.run.mock.calls[0][0];
+      expect(queryString).not.toContain("m.category = $category");
+
+      // Verify parameters don't contain category
+      const params = mockSession.run.mock.calls[0][1];
+      expect(params).not.toHaveProperty("category");
+    });
+
+    it("should combine filters with AND logic", async () => {
+      const query = "test";
+      const mockEmbedding = [0.1, 0.2, 0.3];
+
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
+      jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
+
+      await service.searchByDescription(query, 10, "service", "backend");
+
+      // Verify the query uses AND to combine filters
+      const queryString = mockSession.run.mock.calls[0][0];
+      expect(queryString).toContain("m.embedding IS NOT NULL");
+      expect(queryString).toContain(" AND ");
+      expect(queryString).toContain("m.type = $type");
+      expect(queryString).toContain("m.category = $category");
+    });
   });
 
   describe("getCategoriesList", () => {

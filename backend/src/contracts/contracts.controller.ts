@@ -180,7 +180,7 @@ export class ContractsController {
   @ApiOperation({
     summary: "Search modules by description using semantic similarity",
     description:
-      "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.",
+      "Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules. Optionally filter by type and/or category.",
   })
   @ApiQuery({
     name: "query",
@@ -192,6 +192,18 @@ export class ContractsController {
     name: "limit",
     description: "Maximum number of results to return (default: 10)",
     example: 10,
+    required: false,
+  })
+  @ApiQuery({
+    name: "type",
+    description: "Filter results by contract type (e.g., 'controller', 'service')",
+    example: "service",
+    required: false,
+  })
+  @ApiQuery({
+    name: "category",
+    description: "Filter results by contract category (e.g., 'api', 'backend')",
+    example: "backend",
     required: false,
   })
   @ApiResponse({
@@ -211,6 +223,8 @@ export class ContractsController {
   async searchByDescription(
     @Query("query") query: string,
     @Query("limit") limit?: string,
+    @Query("type") type?: string,
+    @Query("category") category?: string,
   ): Promise<SearchByDescriptionResponseDto> {
     // Validate query parameter
     if (!query || query.trim().length === 0) {
@@ -232,6 +246,8 @@ export class ContractsController {
       return await this.contractsService.searchByDescription(
         query,
         parsedLimit,
+        type,
+        category,
       );
     } catch (error) {
       if (error.message.includes("Embedding service is not ready")) {
