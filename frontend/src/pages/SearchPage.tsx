@@ -17,62 +17,66 @@ import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useState, useMemo } from 'react';
 import ContractCard from '../components/ContractCard';
-import { useContractsControllerGetContractTypes, useContractsControllerGetCategories } from '../api/generated/contracts/contracts';
-
-// Mock data for search results
-const mockContracts = [
-  {
-    id: 'users-get',
-    type: 'controller',
-    category: 'api',
-    description: 'Users get endpoint - retrieves user information from the database',
-    fileName: 'users-get.yml',
-    filePath: '/contracts/users-get.yml'
-  },
-  {
-    id: 'users-permissions',
-    type: 'service',
-    category: 'service',
-    description: 'Users permissions service - manages user authorization and access control',
-    fileName: 'users-permissions.yml',
-    filePath: '/contracts/users-permissions.yml'
-  },
-  {
-    id: 'auth-controller',
-    type: 'controller',
-    category: 'api',
-    description: 'Authentication controller - handles user login and authentication flow',
-    fileName: 'auth-controller.yml',
-    filePath: '/contracts/auth-controller.yml'
-  },
-  {
-    id: 'user-profile',
-    type: 'component',
-    category: 'frontend',
-    description: 'User profile component - displays user information and settings',
-    fileName: 'user-profile.yml',
-    filePath: '/contracts/user-profile.yml'
-  },
-  {
-    id: 'database-service',
-    type: 'service',
-    category: 'service',
-    description: 'Database service - provides database connection and query execution',
-    fileName: 'database-service.yml',
-    filePath: '/contracts/database-service.yml'
-  }
-];
+import { 
+  useContractsControllerGetContractTypes, 
+  useContractsControllerGetCategories,
+  useContractsControllerSearchByDescription,
+  useContractsControllerGetAllContracts
+} from '../api/generated/contracts/contracts';
 
 function SearchPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
 
+  // Check if any filter is active (search query, category, or type)
+  const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasFilters = selectedCategory !== 'all' || selectedType !== 'all';
+  const shouldFetchData = hasSearchQuery || hasFilters;
+
   // Fetch contract types from API
   const { data: typesData, isLoading: isLoadingTypes, isError: isErrorTypes } = useContractsControllerGetContractTypes();
 
   // Fetch contract categories from API
   const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
+
+  // Search contracts using the search API when there's a search query
+  const { 
+    data: searchData, 
+    isLoading: isLoadingSearch, 
+    isError: isErrorSearch 
+  } = useContractsControllerSearchByDescription(
+    { query: searchQuery, limit: '50' },
+    { 
+      query: { 
+        enabled: hasSearchQuery,
+        // Include category and type in query key to trigger refetch when they change
+        queryKey: [
+          'http://localhost/api/contracts/search',
+          { query: searchQuery, limit: '50' },
+          selectedCategory,
+          selectedType
+        ]
+      } 
+    }
+  );
+
+  // Fetch all contracts when only filtering by category/type (no search query)
+  const {
+    data: allContractsData,
+    isLoading: isLoadingAllContracts,
+    isError: isErrorAllContracts
+  } = useContractsControllerGetAllContracts({
+    query: {
+      enabled: !hasSearchQuery && hasFilters,
+      // Include category and type in query key to trigger refetch when they change
+      queryKey: [
+        'http://localhost/api/contracts',
+        selectedCategory,
+        selectedType
+      ]
+    }
+  });
 
   // Transform types data into select options
   const typeOptions = useMemo(() => {
@@ -114,13 +118,64 @@ function SearchPage() {
     setSelectedType(event.target.value);
   };
 
-  // Filter contracts based on search query, category, and type (case-insensitive)
-  const filteredContracts = mockContracts.filter(contract => {
-    const matchesSearch = contract.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || contract.category === selectedCategory;
-    const matchesType = selectedType === 'all' || contract.type === selectedType;
-    return matchesSearch && matchesCategory && matchesType;
-  });
+  // Determine which data source to use and whether we're loading or have errors
+  const isLoading = hasSearchQuery ? isLoadingSearch : isLoadingAllContracts;
+  const isError = hasSearchQuery ? isErrorSearch : isErrorAllContracts;
+  const rawData = hasSearchQuery ? searchData?.results : allContractsData;
+
+  // Process and filter results from API (either search results or all contracts)
+  const filteredContracts = useMemo(() => {
+    if (!rawData) {
+      return [];
+    }
+
+    // Handle search results (from search endpoint)
+    if (hasSearchQuery && searchData?.results) {
+      return searchData.results
+        .filter(result => {
+          const content = result.content as any;
+          const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
+          const matchesType = selectedType === 'all' || content.type === selectedType;
+          return matchesCategory && matchesType;
+        })
+        .map(result => {
+          const content = result.content as any;
+          return {
+            fileName: result.fileName,
+            filePath: result.filePath,
+            id: content.id,
+            type: content.type,
+            category: content.category,
+            description: content.description,
+            similarity: result.similarity
+          };
+        });
+    }
+
+    // Handle all contracts (from get all contracts endpoint)
+    if (allContractsData) {
+      return allContractsData
+        .filter(contract => {
+          const content = contract.content as any;
+          const matchesCategory = selectedCategory === 'all' || content.category === selectedCategory;
+          const matchesType = selectedType === 'all' || content.type === selectedType;
+          return matchesCategory && matchesType;
+        })
+        .map(contract => {
+          const content = contract.content as any;
+          return {
+            fileName: contract.fileName,
+            filePath: contract.filePath,
+            id: content.id,
+            type: content.type,
+            category: content.category,
+            description: content.description
+          };
+        });
+    }
+
+    return [];
+  }, [hasSearchQuery, searchData, allContractsData, selectedCategory, selectedType]);
 
   return (
     <Container maxWidth="lg">
@@ -246,15 +301,24 @@ function SearchPage() {
               Failed to load contract types. Using default options.
             </Alert>
           )}
+          {isError && shouldFetchData && (
+            <Alert severity="error">
+              Failed to {hasSearchQuery ? 'search' : 'load'} contracts. Please try again later.
+            </Alert>
+          )}
 
           {/* Search Results */}
-          {searchQuery === '' ? (
+          {!shouldFetchData ? (
             <Alert severity="info">
-              Start typing to search contracts by description
+              Select a category or type, or search by description
             </Alert>
+          ) : isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+              <CircularProgress />
+            </Box>
           ) : filteredContracts.length === 0 ? (
             <Alert severity="warning">
-              No contracts found matching "{searchQuery}"
+              No contracts found{hasSearchQuery ? ` matching "${searchQuery}"` : ' with selected filters'}
             </Alert>
           ) : (
             <>
