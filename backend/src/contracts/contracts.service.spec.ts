@@ -2850,9 +2850,9 @@ describe("ContractsService", () => {
       expect(result.query).toBe(query);
       expect(result.resultsCount).toBe(2);
       expect(result.results).toHaveLength(2);
-      expect(result.results[0].module_id).toBe("auth-service");
+      expect(result.results[0].content.id).toBe("auth-service");
       expect(result.results[0].similarity).toBe(0.92);
-      expect(result.results[1].module_id).toBe("users-service");
+      expect(result.results[1].content.id).toBe("users-service");
       expect(result.results[1].similarity).toBe(0.78);
 
       // Verify embedding was generated for the query
