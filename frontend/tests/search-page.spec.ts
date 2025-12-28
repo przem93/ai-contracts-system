@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { SearchPage } from './pages/SearchPage';
-import { mockSearchResults, mockSearchApiResponses } from './fixtures/contracts-data';
+import { mockSearchResults, mockSearchApiResponses, mockContracts } from './fixtures/contracts-data';
 
 test.describe('Search Page with Category and Type Select', () => {
   let searchPage: SearchPage;
