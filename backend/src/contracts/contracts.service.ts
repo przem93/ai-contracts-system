@@ -5,6 +5,7 @@ import * as path from "path";
 import * as crypto from "crypto";
 import * as yaml from "js-yaml";
 import { glob } from "glob";
+import { int as neo4jInt } from "neo4j-driver";
 import { ContractSchema, Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { Neo4jService } from "../neo4j/neo4j.service";
@@ -965,7 +966,7 @@ export class ContractsService implements OnModuleInit {
         `,
         {
           queryEmbedding,
-          limit: limit,
+          limit: neo4jInt(limit),
         },
       );
 

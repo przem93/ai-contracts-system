@@ -5,6 +5,7 @@ import { Neo4jService } from "../neo4j/neo4j.service";
 import { EmbeddingService } from "./embedding.service";
 import { Contract } from "./contract.schema";
 import { ContractFileDto } from "./dto/contract-response.dto";
+import { int as neo4jInt } from "neo4j-driver";
 import * as path from "path";
 import * as crypto from "crypto";
 
@@ -2799,7 +2800,7 @@ describe("ContractsService", () => {
         expect.stringContaining("MATCH (m:Module)"),
         expect.objectContaining({
           queryEmbedding: mockEmbedding,
-          limit: 10,
+          limit: neo4jInt(10),
         }),
       );
 
@@ -2821,7 +2822,7 @@ describe("ContractsService", () => {
       expect(mockSession.run).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          limit: customLimit,
+          limit: neo4jInt(customLimit),
         }),
       );
     });
