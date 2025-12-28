@@ -44,7 +44,10 @@ describe("EmbeddingService", () => {
 
       await service.initialize();
       expect(service.isReady()).toBe(true);
-      expect(pipeline).toHaveBeenCalledWith("feature-extraction", "Xenova/all-MiniLM-L6-v2");
+      expect(pipeline).toHaveBeenCalledWith(
+        "feature-extraction",
+        "Xenova/all-MiniLM-L6-v2",
+      );
     });
   });
 
@@ -58,7 +61,7 @@ describe("EmbeddingService", () => {
     it("should generate embedding for valid text", async () => {
       const text = "This is a test description for a module";
       const mockEmbeddingData = [0.1, 0.2, 0.3, 0.4, 0.5];
-      
+
       // Mock the embedding pipeline to return embedding data
       mockPipeline.mockResolvedValue({
         data: mockEmbeddingData,
@@ -79,7 +82,7 @@ describe("EmbeddingService", () => {
     it("should generate consistent embeddings for same text", async () => {
       const text = "Users get endpoint";
       const mockEmbeddingData = [0.1, 0.2, 0.3];
-      
+
       mockPipeline.mockResolvedValue({
         data: mockEmbeddingData,
       });
@@ -96,7 +99,7 @@ describe("EmbeddingService", () => {
       const text2 = "Payment processing endpoint";
       const mockEmbedding1 = [0.1, 0.2, 0.3];
       const mockEmbedding2 = [0.7, 0.8, 0.9];
-      
+
       // Mock different embeddings for different texts
       mockPipeline
         .mockResolvedValueOnce({ data: mockEmbedding1 })

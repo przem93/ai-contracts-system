@@ -71,6 +71,7 @@ describe("ContractsController", () => {
             getModuleRelations: jest.fn(),
             searchByDescription: jest.fn(),
             getContractTypes: jest.fn(),
+            getCategoriesList: jest.fn(),
           },
         },
       ],
@@ -476,7 +477,9 @@ describe("ContractsController", () => {
       });
 
       // Mock getAllContracts
-      jest.spyOn(service, "getAllContracts").mockResolvedValue([mockContracts[0]]);
+      jest
+        .spyOn(service, "getAllContracts")
+        .mockResolvedValue([mockContracts[0]]);
 
       // Mock applyContractsToNeo4j failure
       jest.spyOn(service, "applyContractsToNeo4j").mockResolvedValue({
@@ -510,10 +513,13 @@ describe("ContractsController", () => {
       });
 
       // Mock getAllContracts
-      jest.spyOn(service, "getAllContracts").mockResolvedValue([mockContracts[0]]);
+      jest
+        .spyOn(service, "getAllContracts")
+        .mockResolvedValue([mockContracts[0]]);
 
       // Mock applyContractsToNeo4j failure
-      const errorMessage = "Failed to apply contracts to Neo4j: Database timeout";
+      const errorMessage =
+        "Failed to apply contracts to Neo4j: Database timeout";
       jest.spyOn(service, "applyContractsToNeo4j").mockResolvedValue({
         success: false,
         modulesProcessed: 0,
@@ -602,9 +608,15 @@ describe("ContractsController", () => {
       expect(calledWithContracts[0]).toHaveProperty("filePath");
       expect(calledWithContracts[0]).toHaveProperty("fileHash", "hash123");
       expect(calledWithContracts[0].content).toHaveProperty("id", "users-get");
-      expect(calledWithContracts[0].content).toHaveProperty("type", "controller");
+      expect(calledWithContracts[0].content).toHaveProperty(
+        "type",
+        "controller",
+      );
       expect(calledWithContracts[1]).toHaveProperty("fileHash", "hash456");
-      expect(calledWithContracts[1].content).toHaveProperty("id", "users-service");
+      expect(calledWithContracts[1].content).toHaveProperty(
+        "id",
+        "users-service",
+      );
       expect(calledWithContracts[1].content).toHaveProperty("type", "service");
     });
 
@@ -739,8 +751,10 @@ describe("ContractsController", () => {
             moduleId: "users-get",
             fileName: "users-get.yml",
             filePath: "/contracts/users-get.yml",
-            currentHash: "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1",
-            storedHash: "b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3",
+            currentHash:
+              "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1",
+            storedHash:
+              "b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3",
             status: "modified" as const,
           },
         ],
@@ -970,9 +984,13 @@ describe("ContractsController", () => {
       expect(result.addedCount).toBe(2);
       expect(result.removedCount).toBe(1);
 
-      const modifiedChanges = result.changes.filter((c) => c.status === "modified");
+      const modifiedChanges = result.changes.filter(
+        (c) => c.status === "modified",
+      );
       const addedChanges = result.changes.filter((c) => c.status === "added");
-      const removedChanges = result.changes.filter((c) => c.status === "removed");
+      const removedChanges = result.changes.filter(
+        (c) => c.status === "removed",
+      );
 
       expect(modifiedChanges).toHaveLength(2);
       expect(addedChanges).toHaveLength(2);
@@ -1192,7 +1210,9 @@ describe("ContractsController", () => {
       const result = await controller.getModuleRelations("users-service");
 
       // Verify outgoing dependency parts structure
-      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty(
+        "part_id",
+      );
       expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("type");
       expect(result.outgoing_dependencies[0].parts[0].part_id).toBe(
         "authenticate",
@@ -1200,7 +1220,9 @@ describe("ContractsController", () => {
       expect(result.outgoing_dependencies[0].parts[0].type).toBe("function");
 
       // Verify incoming dependency parts structure
-      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty(
+        "part_id",
+      );
       expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("type");
       expect(result.incoming_dependencies[0].parts[0].part_id).toBe("findUser");
       expect(result.incoming_dependencies[0].parts[0].type).toBe("function");
@@ -1215,7 +1237,7 @@ describe("ContractsController", () => {
         {
           fileName: "auth-service.yml",
           filePath: "/contracts/auth-service.yml",
-          fileHash: "hash123",
+          fileHash: "hash1",
           content: {
             id: "auth-service",
             type: "service",
@@ -1227,7 +1249,7 @@ describe("ContractsController", () => {
         {
           fileName: "users-service.yml",
           filePath: "/contracts/users-service.yml",
-          fileHash: "hash456",
+          fileHash: "hash2",
           content: {
             id: "users-service",
             type: "service",
@@ -1239,7 +1261,7 @@ describe("ContractsController", () => {
         {
           fileName: "login-controller.yml",
           filePath: "/contracts/login-controller.yml",
-          fileHash: "hash789",
+          fileHash: "hash3",
           content: {
             id: "login-controller",
             type: "controller",
@@ -1256,7 +1278,9 @@ describe("ContractsController", () => {
         .spyOn(service, "searchByDescription")
         .mockResolvedValue(mockSearchResults);
 
-      const result = await controller.searchByDescription("user authentication");
+      const result = await controller.searchByDescription(
+        "user authentication",
+      );
 
       expect(result).toEqual(mockSearchResults);
       expect(result.query).toBe("user authentication");
@@ -1309,7 +1333,9 @@ describe("ContractsController", () => {
         .spyOn(service, "searchByDescription")
         .mockResolvedValue(mockSearchResults);
 
-      const result = await controller.searchByDescription("user authentication");
+      const result = await controller.searchByDescription(
+        "user authentication",
+      );
 
       // Verify results are ordered by similarity descending
       for (let i = 0; i < result.results.length - 1; i++) {
@@ -1324,18 +1350,20 @@ describe("ContractsController", () => {
         .spyOn(service, "searchByDescription")
         .mockResolvedValue(mockSearchResults);
 
-      const result = await controller.searchByDescription("user authentication");
+      const result = await controller.searchByDescription(
+        "user authentication",
+      );
 
       result.results.forEach((item) => {
         expect(item).toHaveProperty("fileName");
         expect(item).toHaveProperty("filePath");
-        expect(item).toHaveProperty("fileHash");
         expect(item).toHaveProperty("content");
+        expect(item).toHaveProperty("fileHash");
+        expect(item).toHaveProperty("similarity");
         expect(item.content).toHaveProperty("id");
         expect(item.content).toHaveProperty("type");
         expect(item.content).toHaveProperty("description");
         expect(item.content).toHaveProperty("category");
-        expect(item).toHaveProperty("similarity");
         expect(typeof item.similarity).toBe("number");
         expect(item.similarity).toBeGreaterThan(0);
         expect(item.similarity).toBeLessThanOrEqual(1);
@@ -1414,21 +1442,29 @@ describe("ContractsController", () => {
 
       await controller.searchByDescription("test query", "100");
 
-      expect(service.searchByDescription).toHaveBeenCalledWith("test query", 100);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "test query",
+        100,
+      );
     });
 
     it("should throw InternalServerErrorException when embedding service is not ready", async () => {
       jest
         .spyOn(service, "searchByDescription")
         .mockRejectedValue(
-          new Error("Embedding service is not ready. Cannot perform semantic search."),
+          new Error(
+            "Embedding service is not ready. Cannot perform semantic search.",
+          ),
         );
 
       await expect(
         controller.searchByDescription("test query"),
       ).rejects.toThrow(InternalServerErrorException);
 
-      expect(service.searchByDescription).toHaveBeenCalledWith("test query", 10);
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        "test query",
+        10,
+      );
     });
 
     it("should throw InternalServerErrorException for Neo4j errors", async () => {
@@ -1457,11 +1493,14 @@ describe("ContractsController", () => {
 
     it("should handle queries with special characters", async () => {
       const queryWithSpecialChars = "user's authentication & authorization";
-      jest
-        .spyOn(service, "searchByDescription")
-        .mockResolvedValue({ ...mockSearchResults, query: queryWithSpecialChars });
+      jest.spyOn(service, "searchByDescription").mockResolvedValue({
+        ...mockSearchResults,
+        query: queryWithSpecialChars,
+      });
 
-      const result = await controller.searchByDescription(queryWithSpecialChars);
+      const result = await controller.searchByDescription(
+        queryWithSpecialChars,
+      );
 
       expect(result.query).toBe(queryWithSpecialChars);
       expect(service.searchByDescription).toHaveBeenCalledWith(
@@ -1471,10 +1510,15 @@ describe("ContractsController", () => {
     });
 
     it("should handle long queries", async () => {
-      const longQuery = "This is a very long query describing a complex module that handles user authentication, authorization, session management, and token validation with advanced security features";
+      const longQuery =
+        "This is a very long query describing a complex module that handles user authentication, authorization, session management, and token validation with advanced security features";
+      const mockLongQueryResults = {
+        ...mockSearchResults,
+        query: longQuery,
+      };
       jest
         .spyOn(service, "searchByDescription")
-        .mockResolvedValue({ ...mockSearchResults, query: longQuery });
+        .mockResolvedValue(mockLongQueryResults);
 
       const result = await controller.searchByDescription(longQuery);
 
@@ -1502,9 +1546,7 @@ describe("ContractsController", () => {
           })),
       };
 
-      jest
-        .spyOn(service, "searchByDescription")
-        .mockResolvedValue(manyResults);
+      jest.spyOn(service, "searchByDescription").mockResolvedValue(manyResults);
 
       const result = await controller.searchByDescription("service");
 
@@ -1514,9 +1556,13 @@ describe("ContractsController", () => {
 
     it("should return query exactly as provided", async () => {
       const query = "  USER Authentication  ";
+      const mockQueryResults = {
+        ...mockSearchResults,
+        query,
+      };
       jest
         .spyOn(service, "searchByDescription")
-        .mockResolvedValue({ ...mockSearchResults, query });
+        .mockResolvedValue(mockQueryResults);
 
       const result = await controller.searchByDescription(query);
 
@@ -1713,6 +1759,130 @@ describe("ContractsController", () => {
 
       expect(getContractTypesSpy).toHaveBeenCalledWith();
       expect(getContractTypesSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("getCategories", () => {
+    it("should return list of categories", async () => {
+      const mockCategoriesResult = {
+        categories: ["api", "service", "frontend"],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockCategoriesResult);
+
+      const result = await controller.getCategories();
+
+      expect(result).toEqual(mockCategoriesResult);
+      expect(result.categories).toHaveLength(3);
+      expect(service.getCategoriesList).toHaveBeenCalled();
+    });
+
+    it("should return empty array when no categories exist", async () => {
+      const mockEmptyResult = {
+        categories: [],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockEmptyResult);
+
+      const result = await controller.getCategories();
+
+      expect(result.categories).toEqual([]);
+      expect(result.categories).toHaveLength(0);
+    });
+
+    it("should return categories in alphabetical order", async () => {
+      const mockCategoriesResult = {
+        categories: ["api", "backend", "frontend", "service"],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockCategoriesResult);
+
+      const result = await controller.getCategories();
+
+      // Verify categories are sorted
+      const sortedCategories = [...result.categories].sort();
+      expect(result.categories).toEqual(sortedCategories);
+    });
+
+    it("should return only unique categories", async () => {
+      const mockCategoriesResult = {
+        categories: ["api", "frontend", "service"],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockCategoriesResult);
+
+      const result = await controller.getCategories();
+
+      // Verify all categories are unique
+      const uniqueCategories = [...new Set(result.categories)];
+      expect(result.categories).toEqual(uniqueCategories);
+    });
+
+    it("should throw InternalServerErrorException when service fails", async () => {
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockRejectedValue(new Error("Database connection failed"));
+
+      await expect(controller.getCategories()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(service.getCategoriesList).toHaveBeenCalled();
+    });
+
+    it("should include error message in exception", async () => {
+      const errorMessage = "Neo4j connection timeout";
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockRejectedValue(new Error(errorMessage));
+
+      try {
+        await controller.getCategories();
+        fail("Should have thrown InternalServerErrorException");
+      } catch (error) {
+        expect(error).toBeInstanceOf(InternalServerErrorException);
+        expect(error.message).toContain("Failed to fetch categories");
+        expect(error.message).toContain(errorMessage);
+      }
+    });
+
+    it("should handle single category", async () => {
+      const mockCategoriesResult = {
+        categories: ["api"],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockCategoriesResult);
+
+      const result = await controller.getCategories();
+
+      expect(result.categories).toHaveLength(1);
+      expect(result.categories[0]).toBe("api");
+    });
+
+    it("should return all categories as strings", async () => {
+      const mockCategoriesResult = {
+        categories: ["api", "service", "frontend", "backend"],
+      };
+
+      jest
+        .spyOn(service, "getCategoriesList")
+        .mockResolvedValue(mockCategoriesResult);
+
+      const result = await controller.getCategories();
+
+      result.categories.forEach((category) => {
+        expect(typeof category).toBe("string");
+      });
     });
   });
 });

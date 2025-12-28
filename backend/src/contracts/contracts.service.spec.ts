@@ -27,7 +27,7 @@ describe("ContractsService", () => {
   beforeEach(async () => {
     // Create a shared mock function for run operations
     const sharedRunMock = jest.fn().mockResolvedValue({ records: [] });
-    
+
     // Create mock transaction that uses the shared run mock
     const mockTransaction = {
       run: sharedRunMock,
@@ -611,8 +611,12 @@ describe("ContractsService", () => {
         (f) => f.fileName === "invalid-duplicate-module-id-2.yml",
       );
 
-      expect(file1!.errors!.some((e) => e.message.includes("duplicate-module"))).toBe(true);
-      expect(file2!.errors!.some((e) => e.message.includes("duplicate-module"))).toBe(true);
+      expect(
+        file1!.errors!.some((e) => e.message.includes("duplicate-module")),
+      ).toBe(true);
+      expect(
+        file2!.errors!.some((e) => e.message.includes("duplicate-module")),
+      ).toBe(true);
 
       // Check second pair of duplicates (another-duplicate)
       const file3 = result.files.find(
@@ -622,8 +626,12 @@ describe("ContractsService", () => {
         (f) => f.fileName === "invalid-duplicate-module-id-4.yml",
       );
 
-      expect(file3!.errors!.some((e) => e.message.includes("another-duplicate"))).toBe(true);
-      expect(file4!.errors!.some((e) => e.message.includes("another-duplicate"))).toBe(true);
+      expect(
+        file3!.errors!.some((e) => e.message.includes("another-duplicate")),
+      ).toBe(true);
+      expect(
+        file4!.errors!.some((e) => e.message.includes("another-duplicate")),
+      ).toBe(true);
     });
 
     it("should not report duplicate errors for contracts with unique module IDs", async () => {
@@ -639,7 +647,9 @@ describe("ContractsService", () => {
       result.files.forEach((file) => {
         if (file.errors) {
           expect(
-            file.errors.every((err) => !err.message.includes("Duplicate module id")),
+            file.errors.every(
+              (err) => !err.message.includes("Duplicate module id"),
+            ),
           ).toBe(true);
         }
       });
@@ -689,11 +699,13 @@ describe("ContractsService", () => {
         err.message.includes("Duplicate dependency"),
       );
       expect(duplicateErrors.length).toBe(2); // Both occurrences should be flagged
-      
+
       // Verify error message contains the module name
       duplicateErrors.forEach((error) => {
         expect(error.message).toContain("users-permissions");
-        expect(error.message).toContain("Each module should be listed only once in dependencies");
+        expect(error.message).toContain(
+          "Each module should be listed only once in dependencies",
+        );
         expect(error.path).toMatch(/^dependencies\.\d+\.module_id$/);
       });
     });
@@ -718,16 +730,16 @@ describe("ContractsService", () => {
       const duplicateErrors = invalidFile!.errors!.filter((err) =>
         err.message.includes("Duplicate dependency"),
       );
-      
+
       // Should have 4 errors: 2 for users-permissions + 2 for auth-service
       expect(duplicateErrors.length).toBe(4);
-      
+
       // Check that both duplicate modules are reported
       const usersPermissionsErrors = duplicateErrors.filter((err) =>
         err.message.includes("users-permissions"),
       );
       expect(usersPermissionsErrors.length).toBe(2);
-      
+
       const authServiceErrors = duplicateErrors.filter((err) =>
         err.message.includes("auth-service"),
       );
@@ -754,10 +766,10 @@ describe("ContractsService", () => {
       const duplicateErrors = invalidFile!.errors!.filter((err) =>
         err.message.includes("Duplicate dependency"),
       );
-      
+
       // All 3 occurrences should be flagged
       expect(duplicateErrors.length).toBe(3);
-      
+
       // All should reference the same module
       duplicateErrors.forEach((error) => {
         expect(error.message).toContain("users-permissions");
@@ -782,7 +794,9 @@ describe("ContractsService", () => {
       result.files.forEach((file) => {
         if (file.errors) {
           expect(
-            file.errors.every((err) => !err.message.includes("Duplicate dependency")),
+            file.errors.every(
+              (err) => !err.message.includes("Duplicate dependency"),
+            ),
           ).toBe(true);
         }
       });
@@ -806,16 +820,18 @@ describe("ContractsService", () => {
       );
 
       expect(duplicateErrors.length).toBe(2);
-      
+
       // Check error paths point to the dependencies
       expect(duplicateErrors[0].path).toMatch(/^dependencies\.\d+\.module_id$/);
       expect(duplicateErrors[1].path).toMatch(/^dependencies\.\d+\.module_id$/);
-      
+
       // Ensure error messages are clear
       duplicateErrors.forEach((error) => {
         expect(error.message).toBeTruthy();
         expect(error.message).toContain("Duplicate dependency");
-        expect(error.message).toContain("Each module should be listed only once");
+        expect(error.message).toContain(
+          "Each module should be listed only once",
+        );
       });
     });
 
@@ -842,8 +858,12 @@ describe("ContractsService", () => {
       );
       expect(selfDependencyError).toBeDefined();
       expect(selfDependencyError!.message).toContain("self-dependent-module");
-      expect(selfDependencyError!.message).toContain("Self-dependencies are not allowed");
-      expect(selfDependencyError!.path).toMatch(/^dependencies\.\d+\.module_id$/);
+      expect(selfDependencyError!.message).toContain(
+        "Self-dependencies are not allowed",
+      );
+      expect(selfDependencyError!.path).toMatch(
+        /^dependencies\.\d+\.module_id$/,
+      );
     });
 
     it("should not report self-dependency errors for valid contracts", async () => {
@@ -862,7 +882,9 @@ describe("ContractsService", () => {
       result.files.forEach((file) => {
         if (file.errors) {
           expect(
-            file.errors.every((err) => !err.message.includes("cannot depend on itself")),
+            file.errors.every(
+              (err) => !err.message.includes("cannot depend on itself"),
+            ),
           ).toBe(true);
         }
       });
@@ -927,7 +949,8 @@ describe("ContractsService", () => {
 
       expect(result.valid).toBe(false);
       const invalidFile = result.files.find(
-        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
+        (f) =>
+          f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
       );
       expect(invalidFile).toBeDefined();
       expect(invalidFile!.valid).toBe(false);
@@ -938,12 +961,14 @@ describe("ContractsService", () => {
         err.message.includes("Duplicate part_id"),
       );
       expect(duplicatePartErrors.length).toBe(2); // Both occurrences should be flagged
-      
+
       // Verify error message contains the part_id and module name
       duplicatePartErrors.forEach((error) => {
         expect(error.message).toContain("id");
         expect(error.message).toContain("users-permissions");
-        expect(error.message).toContain("Each part should be referenced only once per dependency");
+        expect(error.message).toContain(
+          "Each part should be referenced only once per dependency",
+        );
         expect(error.path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
       });
     });
@@ -959,7 +984,8 @@ describe("ContractsService", () => {
 
       expect(result.valid).toBe(false);
       const invalidFile = result.files.find(
-        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-multiple.yml",
+        (f) =>
+          f.fileName === "invalid-duplicate-parts-in-dependency-multiple.yml",
       );
       expect(invalidFile).toBeDefined();
       expect(invalidFile!.valid).toBe(false);
@@ -968,16 +994,16 @@ describe("ContractsService", () => {
       const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
         err.message.includes("Duplicate part_id"),
       );
-      
+
       // Should have 4 errors: 2 for "id" + 2 for "name"
       expect(duplicatePartErrors.length).toBe(4);
-      
+
       // Check that both duplicate part_ids are reported
       const idErrors = duplicatePartErrors.filter((err) =>
         err.message.includes('part_id "id"'),
       );
       expect(idErrors.length).toBe(2);
-      
+
       const nameErrors = duplicatePartErrors.filter((err) =>
         err.message.includes('part_id "name"'),
       );
@@ -995,7 +1021,8 @@ describe("ContractsService", () => {
 
       expect(result.valid).toBe(false);
       const invalidFile = result.files.find(
-        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-triple.yml",
+        (f) =>
+          f.fileName === "invalid-duplicate-parts-in-dependency-triple.yml",
       );
       expect(invalidFile).toBeDefined();
       expect(invalidFile!.valid).toBe(false);
@@ -1004,10 +1031,10 @@ describe("ContractsService", () => {
       const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
         err.message.includes("Duplicate part_id"),
       );
-      
+
       // All 3 occurrences should be flagged
       expect(duplicatePartErrors.length).toBe(3);
-      
+
       // All should reference the same part_id
       duplicatePartErrors.forEach((error) => {
         expect(error.message).toContain('part_id "id"');
@@ -1026,7 +1053,9 @@ describe("ContractsService", () => {
 
       expect(result.valid).toBe(false);
       const invalidFile = result.files.find(
-        (f) => f.fileName === "invalid-duplicate-parts-across-multiple-dependencies.yml",
+        (f) =>
+          f.fileName ===
+          "invalid-duplicate-parts-across-multiple-dependencies.yml",
       );
       expect(invalidFile).toBeDefined();
       expect(invalidFile!.valid).toBe(false);
@@ -1035,10 +1064,10 @@ describe("ContractsService", () => {
       const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
         err.message.includes("Duplicate part_id"),
       );
-      
+
       // Should have 4 errors: 2 in first dependency + 2 in second dependency
       expect(duplicatePartErrors.length).toBe(4);
-      
+
       // Check errors for first dependency (users-permissions)
       const dep0Errors = duplicatePartErrors.filter((err) =>
         err.path.startsWith("dependencies.0."),
@@ -1047,7 +1076,7 @@ describe("ContractsService", () => {
       dep0Errors.forEach((error) => {
         expect(error.message).toContain("users-permissions");
       });
-      
+
       // Check errors for second dependency (simple-service)
       const dep1Errors = duplicatePartErrors.filter((err) =>
         err.path.startsWith("dependencies.1."),
@@ -1074,7 +1103,9 @@ describe("ContractsService", () => {
       result.files.forEach((file) => {
         if (file.errors) {
           expect(
-            file.errors.every((err) => !err.message.includes("Duplicate part_id")),
+            file.errors.every(
+              (err) => !err.message.includes("Duplicate part_id"),
+            ),
           ).toBe(true);
         }
       });
@@ -1090,7 +1121,8 @@ describe("ContractsService", () => {
       const result = await service.validateContracts();
 
       const invalidFile = result.files.find(
-        (f) => f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
+        (f) =>
+          f.fileName === "invalid-duplicate-parts-in-dependency-simple.yml",
       );
 
       const duplicatePartErrors = invalidFile!.errors!.filter((err) =>
@@ -1098,16 +1130,22 @@ describe("ContractsService", () => {
       );
 
       expect(duplicatePartErrors.length).toBe(2);
-      
+
       // Check error paths point to the dependency parts
-      expect(duplicatePartErrors[0].path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
-      expect(duplicatePartErrors[1].path).toMatch(/^dependencies\.0\.parts\.\d+\.part_id$/);
-      
+      expect(duplicatePartErrors[0].path).toMatch(
+        /^dependencies\.0\.parts\.\d+\.part_id$/,
+      );
+      expect(duplicatePartErrors[1].path).toMatch(
+        /^dependencies\.0\.parts\.\d+\.part_id$/,
+      );
+
       // Ensure error messages are clear
       duplicatePartErrors.forEach((error) => {
         expect(error.message).toBeTruthy();
         expect(error.message).toContain("Duplicate part_id");
-        expect(error.message).toContain("Each part should be referenced only once per dependency");
+        expect(error.message).toContain(
+          "Each part should be referenced only once per dependency",
+        );
       });
     });
   });
@@ -1148,7 +1186,9 @@ describe("ContractsService", () => {
       await service.applyContractsToNeo4j(contractFiles);
 
       // Verify database clearing happens FIRST (before constraint creation)
-      expect(mockSession.run.mock.calls[0][0]).toContain("MATCH (n) DETACH DELETE n");
+      expect(mockSession.run.mock.calls[0][0]).toContain(
+        "MATCH (n) DETACH DELETE n",
+      );
 
       // Verify constraint creation is called SECOND (after clearing removes duplicates)
       expect(mockSession.run.mock.calls[1][0]).toContain(
@@ -1242,10 +1282,10 @@ describe("ContractsService", () => {
           parts: expect.any(String),
         }),
       );
-      
+
       // Ensure the redundant module_id property is NOT in the relationship pattern
-      const dependencyCall = mockSession.run.mock.calls.find(call => 
-        call[0] && call[0].includes("MODULE_DEPENDENCY")
+      const dependencyCall = mockSession.run.mock.calls.find(
+        (call) => call[0] && call[0].includes("MODULE_DEPENDENCY"),
       );
       expect(dependencyCall[0]).not.toContain("MODULE_DEPENDENCY {module_id:");
 
@@ -1571,7 +1611,8 @@ describe("ContractsService", () => {
     });
 
     it("should store contract file hash in Module node", async () => {
-      const testHash = "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1";
+      const testHash =
+        "a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1";
       const contractFiles: ContractFileDto[] = [
         {
           fileName: "test-module.yml",
@@ -1646,10 +1687,12 @@ describe("ContractsService", () => {
 
     it("should generate and store embeddings when embedding service is ready", async () => {
       const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5];
-      
+
       // Mock embedding service to be ready and return embedding
       jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
-      jest.spyOn(embeddingService, "generateEmbedding").mockResolvedValue(mockEmbedding);
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockResolvedValue(mockEmbedding);
 
       const contractFiles: ContractFileDto[] = [
         {
@@ -1668,7 +1711,9 @@ describe("ContractsService", () => {
       await service.applyContractsToNeo4j(contractFiles);
 
       // Verify generateEmbedding was called with the description
-      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("Test module description");
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
+        "Test module description",
+      );
 
       // Verify module creation was called with embedding
       expect(mockSession.run).toHaveBeenCalledWith(
@@ -1718,7 +1763,9 @@ describe("ContractsService", () => {
     it("should handle embedding generation errors gracefully", async () => {
       // Mock embedding service to be ready but throw error
       jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
-      jest.spyOn(embeddingService, "generateEmbedding").mockRejectedValue(new Error("Embedding generation failed"));
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
+        .mockRejectedValue(new Error("Embedding generation failed"));
 
       const contractFiles: ContractFileDto[] = [
         {
@@ -1754,10 +1801,11 @@ describe("ContractsService", () => {
     it("should generate embeddings for multiple contracts", async () => {
       const mockEmbedding1 = [0.1, 0.2, 0.3];
       const mockEmbedding2 = [0.4, 0.5, 0.6];
-      
+
       // Mock embedding service to be ready
       jest.spyOn(embeddingService, "isReady").mockReturnValue(true);
-      jest.spyOn(embeddingService, "generateEmbedding")
+      jest
+        .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValueOnce(mockEmbedding1)
         .mockResolvedValueOnce(mockEmbedding2);
 
@@ -1789,8 +1837,12 @@ describe("ContractsService", () => {
       await service.applyContractsToNeo4j(contractFiles);
 
       // Verify generateEmbedding was called for both descriptions
-      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("First module description");
-      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith("Second module description");
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
+        "First module description",
+      );
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
+        "Second module description",
+      );
       expect(embeddingService.generateEmbedding).toHaveBeenCalledTimes(2);
 
       // Verify module creation was called with correct embeddings
@@ -1830,7 +1882,8 @@ describe("ContractsService", () => {
     });
 
     it("should calculate same hash for same file content", async () => {
-      const testContent = "id: test\ntype: service\ncategory: backend\ndescription: Test";
+      const testContent =
+        "id: test\ntype: service\ncategory: backend\ndescription: Test";
       const expectedHash = crypto
         .createHash("sha256")
         .update(testContent)
@@ -1856,7 +1909,7 @@ describe("ContractsService", () => {
 
       expect(result).toBeDefined();
       expect(result.length).toBeGreaterThan(0);
-      
+
       result.forEach((contract) => {
         expect(contract.fileName).toBeDefined();
         expect(contract.filePath).toBeDefined();
@@ -1874,10 +1927,10 @@ describe("ContractsService", () => {
       const result = await service.getAllContracts();
 
       expect(result.length).toBeGreaterThan(1);
-      
+
       const hashes = result.map((c) => c.fileHash);
       const uniqueHashes = new Set(hashes);
-      
+
       // All hashes should be unique (different files should have different hashes)
       expect(uniqueHashes.size).toBe(hashes.length);
     });
@@ -2364,7 +2417,9 @@ describe("ContractsService", () => {
       );
 
       // Verify incoming dependency
-      expect(result.incoming_dependencies[0].module_id).toBe("users-controller");
+      expect(result.incoming_dependencies[0].module_id).toBe(
+        "users-controller",
+      );
       expect(result.incoming_dependencies[0].parts).toHaveLength(2);
       expect(result.incoming_dependencies[0].parts[0].part_id).toBe("findUser");
 
@@ -2507,11 +2562,13 @@ describe("ContractsService", () => {
     });
 
     it("should handle Neo4j errors during module check", async () => {
-      mockSession.run.mockRejectedValueOnce(new Error("Neo4j connection failed"));
+      mockSession.run.mockRejectedValueOnce(
+        new Error("Neo4j connection failed"),
+      );
 
-      await expect(
-        service.getModuleRelations("users-service"),
-      ).rejects.toThrow("Neo4j connection failed");
+      await expect(service.getModuleRelations("users-service")).rejects.toThrow(
+        "Neo4j connection failed",
+      );
 
       expect(mockSession.close).toHaveBeenCalled();
     });
@@ -2525,9 +2582,9 @@ describe("ContractsService", () => {
       // Mock error on outgoing dependencies query
       mockSession.run.mockRejectedValueOnce(new Error("Query failed"));
 
-      await expect(
-        service.getModuleRelations("users-service"),
-      ).rejects.toThrow("Query failed");
+      await expect(service.getModuleRelations("users-service")).rejects.toThrow(
+        "Query failed",
+      );
 
       expect(mockSession.close).toHaveBeenCalled();
     });
@@ -2546,9 +2603,9 @@ describe("ContractsService", () => {
       // Mock error on incoming dependencies query
       mockSession.run.mockRejectedValueOnce(new Error("Query failed"));
 
-      await expect(
-        service.getModuleRelations("users-service"),
-      ).rejects.toThrow("Query failed");
+      await expect(service.getModuleRelations("users-service")).rejects.toThrow(
+        "Query failed",
+      );
 
       expect(mockSession.close).toHaveBeenCalled();
     });
@@ -2558,9 +2615,9 @@ describe("ContractsService", () => {
         new Error("Database connection error"),
       );
 
-      await expect(
-        service.getModuleRelations("users-service"),
-      ).rejects.toThrow("Database connection error");
+      await expect(service.getModuleRelations("users-service")).rejects.toThrow(
+        "Database connection error",
+      );
 
       expect(mockSession.close).toHaveBeenCalled();
     });
@@ -2649,15 +2706,21 @@ describe("ContractsService", () => {
       const result = await service.getModuleRelations("test-module");
 
       // Verify outgoing parts structure
-      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty(
+        "part_id",
+      );
       expect(result.outgoing_dependencies[0].parts[0]).toHaveProperty("type");
       expect(result.outgoing_dependencies[0].parts[0].part_id).toBe("testFunc");
       expect(result.outgoing_dependencies[0].parts[0].type).toBe("function");
 
       // Verify incoming parts structure
-      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("part_id");
+      expect(result.incoming_dependencies[0].parts[0]).toHaveProperty(
+        "part_id",
+      );
       expect(result.incoming_dependencies[0].parts[0]).toHaveProperty("type");
-      expect(result.incoming_dependencies[0].parts[0].part_id).toBe("exportFunc");
+      expect(result.incoming_dependencies[0].parts[0].part_id).toBe(
+        "exportFunc",
+      );
       expect(result.incoming_dependencies[0].parts[0].type).toBe("function");
 
       expect(mockSession.close).toHaveBeenCalled();
@@ -2774,7 +2837,7 @@ describe("ContractsService", () => {
         {
           fileName: "auth-service.yml",
           filePath: "/contracts/auth-service.yml",
-          fileHash: "hash123",
+          fileHash: "hash1",
           content: {
             id: "auth-service",
             type: "service",
@@ -2785,7 +2848,7 @@ describe("ContractsService", () => {
         {
           fileName: "users-service.yml",
           filePath: "/contracts/users-service.yml",
-          fileHash: "hash456",
+          fileHash: "hash2",
           content: {
             id: "users-service",
             type: "service",
@@ -2798,8 +2861,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: mockResults });
       jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
 
@@ -2807,10 +2870,8 @@ describe("ContractsService", () => {
       expect(result.query).toBe(query);
       expect(result.resultsCount).toBe(2);
       expect(result.results).toHaveLength(2);
-      expect(result.results[0].fileName).toBe("auth-service.yml");
       expect(result.results[0].content.id).toBe("auth-service");
       expect(result.results[0].similarity).toBe(0.92);
-      expect(result.results[1].fileName).toBe("users-service.yml");
       expect(result.results[1].content.id).toBe("users-service");
       expect(result.results[1].similarity).toBe(0.78);
 
@@ -2826,9 +2887,6 @@ describe("ContractsService", () => {
         }),
       );
 
-      // Verify getAllContracts was called
-      expect(service.getAllContracts).toHaveBeenCalled();
-
       expect(mockSession.close).toHaveBeenCalled();
     });
 
@@ -2840,8 +2898,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, customLimit);
 
@@ -2860,8 +2918,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(query, 10);
 
@@ -2936,8 +2994,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
 
@@ -2959,8 +3017,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
 
@@ -2978,8 +3036,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
 
@@ -2997,8 +3055,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       await service.searchByDescription(query, 10);
 
@@ -3017,6 +3075,9 @@ describe("ContractsService", () => {
           get: (field: string) => {
             const data = {
               module_id: "test-module",
+              type: "service",
+              description: "Test module description",
+              category: "backend",
               similarity: 0.95,
             };
             return data[field];
@@ -3028,7 +3089,7 @@ describe("ContractsService", () => {
         {
           fileName: "test-module.yml",
           filePath: "/contracts/test-module.yml",
-          fileHash: "hash123",
+          fileHash: "hash1",
           content: {
             id: "test-module",
             type: "service",
@@ -3041,20 +3102,20 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: mockResults });
       jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
 
       expect(result.results[0]).toHaveProperty("fileName");
       expect(result.results[0]).toHaveProperty("filePath");
-      expect(result.results[0]).toHaveProperty("fileHash");
       expect(result.results[0]).toHaveProperty("content");
+      expect(result.results[0]).toHaveProperty("fileHash");
+      expect(result.results[0]).toHaveProperty("similarity");
       expect(result.results[0].content).toHaveProperty("id");
       expect(result.results[0].content).toHaveProperty("type");
       expect(result.results[0].content).toHaveProperty("description");
       expect(result.results[0].content).toHaveProperty("category");
-      expect(result.results[0]).toHaveProperty("similarity");
     });
 
     it("should handle queries with special characters", async () => {
@@ -3064,8 +3125,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(query, 10);
 
@@ -3081,13 +3142,15 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: [] });
       jest.spyOn(service, "getAllContracts").mockResolvedValue([]);
+      mockSession.run.mockResolvedValue({ records: [] });
 
       const result = await service.searchByDescription(longQuery, 10);
 
       expect(result.query).toBe(longQuery);
-      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(longQuery);
+      expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
+        longQuery,
+      );
     });
 
     it("should handle multiple search results correctly", async () => {
@@ -3122,8 +3185,8 @@ describe("ContractsService", () => {
       jest
         .spyOn(embeddingService, "generateEmbedding")
         .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: mockResults });
       jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
+      mockSession.run.mockResolvedValue({ records: mockResults });
 
       const result = await service.searchByDescription(query, 10);
 
@@ -3132,61 +3195,8 @@ describe("ContractsService", () => {
       // Verify all modules are correctly mapped
       result.results.forEach((res, i) => {
         expect(res.content.id).toBe(`service-${i}`);
-        expect(res.fileName).toBe(`service-${i}.yml`);
         expect(res.similarity).toBe(0.9 - i * 0.1);
       });
-    });
-
-    it("should filter out modules found in Neo4j but not in contract files", async () => {
-      const query = "test query";
-      const mockEmbedding = [0.1, 0.2, 0.3];
-      const mockResults = [
-        {
-          get: (field: string) => {
-            const data = {
-              module_id: "existing-module",
-              similarity: 0.95,
-            };
-            return data[field];
-          },
-        },
-        {
-          get: (field: string) => {
-            const data = {
-              module_id: "missing-module",
-              similarity: 0.85,
-            };
-            return data[field];
-          },
-        },
-      ];
-
-      const mockContracts = [
-        {
-          fileName: "existing-module.yml",
-          filePath: "/contracts/existing-module.yml",
-          fileHash: "hash123",
-          content: {
-            id: "existing-module",
-            type: "service",
-            description: "Existing module",
-            category: "backend",
-          },
-        },
-      ];
-
-      jest
-        .spyOn(embeddingService, "generateEmbedding")
-        .mockResolvedValue(mockEmbedding);
-      mockSession.run.mockResolvedValue({ records: mockResults });
-      jest.spyOn(service, "getAllContracts").mockResolvedValue(mockContracts);
-
-      const result = await service.searchByDescription(query, 10);
-
-      // Should only return the module that exists in contract files
-      expect(result.resultsCount).toBe(1);
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].content.id).toBe("existing-module");
     });
 
     it("should always close session even on error", async () => {
@@ -3201,105 +3211,166 @@ describe("ContractsService", () => {
     });
   });
 
-  describe("getContractTypes", () => {
-    const testFixturesPath = path.join(__dirname, "test-fixtures");
+  describe("getCategoriesList", () => {
+    it("should return list of unique categories", async () => {
+      const mockRecords = [
+        { get: () => "api" },
+        { get: () => "service" },
+        { get: () => "frontend" },
+      ];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
 
-    it("should return all unique contract types", async () => {
-      const validPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+      const result = await service.getCategoriesList();
 
-      const result = await service.getContractTypes();
-
-      expect(result).toBeDefined();
-      expect(result.types).toBeDefined();
-      expect(result.count).toBeDefined();
-      expect(Array.isArray(result.types)).toBe(true);
-      expect(result.count).toBe(result.types.length);
+      expect(result).toHaveProperty("categories");
+      expect(result.categories).toHaveLength(3);
+      expect(result.categories).toEqual(["api", "service", "frontend"]);
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("MATCH (m:Module)"),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("WHERE m.category IS NOT NULL"),
+      );
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("RETURN DISTINCT m.category AS category"),
+      );
+      expect(mockSession.close).toHaveBeenCalled();
     });
 
-    it("should return unique types without duplicates", async () => {
-      const validPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+    it("should return empty array when no categories exist", async () => {
+      mockSession.run.mockResolvedValue({ records: [] });
 
-      const result = await service.getContractTypes();
+      const result = await service.getCategoriesList();
 
-      // Check for uniqueness
-      const uniqueTypes = new Set(result.types);
-      expect(uniqueTypes.size).toBe(result.types.length);
+      expect(result.categories).toEqual([]);
+      expect(result.categories).toHaveLength(0);
+      expect(mockSession.close).toHaveBeenCalled();
     });
 
-    it("should return sorted types alphabetically", async () => {
-      const validPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(validPattern);
+    it("should return categories in alphabetical order", async () => {
+      const mockRecords = [
+        { get: () => "api" },
+        { get: () => "backend" },
+        { get: () => "frontend" },
+        { get: () => "service" },
+      ];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
 
-      const result = await service.getContractTypes();
+      const result = await service.getCategoriesList();
 
-      // Check if sorted
-      const sortedTypes = [...result.types].sort();
-      expect(result.types).toEqual(sortedTypes);
-    });
-
-    it("should return empty array when no contracts exist", async () => {
-      const nonExistentPattern = path.join(testFixturesPath, "non-existent-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(nonExistentPattern);
-
-      const result = await service.getContractTypes();
-
-      expect(result.types).toEqual([]);
-      expect(result.count).toBe(0);
-    });
-
-    it("should handle contracts with different types correctly", async () => {
-      // Use all valid contracts to get multiple types
-      const allValidPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(allValidPattern);
-
-      const result = await service.getContractTypes();
-
-      // Verify we got the expected types from test fixtures
-      expect(result.types).toContain("service");
-      expect(result.count).toBeGreaterThan(0);
-    });
-
-    it("should throw error when CONTRACTS_PATH is not set", async () => {
-      jest.spyOn(configService, "get").mockReturnValue(undefined);
-
-      await expect(service.getContractTypes()).rejects.toThrow(
-        "Failed to get contract types: CONTRACTS_PATH environment variable is not set",
+      expect(result.categories).toEqual([
+        "api",
+        "backend",
+        "frontend",
+        "service",
+      ]);
+      expect(mockSession.run).toHaveBeenCalledWith(
+        expect.stringContaining("ORDER BY category ASC"),
       );
     });
 
-    it("should handle file read errors gracefully", async () => {
-      const invalidPattern = path.join("/invalid/path/*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(invalidPattern);
+    it("should handle single category", async () => {
+      const mockRecords = [{ get: () => "api" }];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
 
-      const result = await service.getContractTypes();
+      const result = await service.getCategoriesList();
 
-      // Should return empty array when no files are found
-      expect(result.types).toEqual([]);
-      expect(result.count).toBe(0);
+      expect(result.categories).toHaveLength(1);
+      expect(result.categories[0]).toBe("api");
     });
 
-    it("should include only valid contract types from parseable files", async () => {
-      const allPattern = path.join(testFixturesPath, "*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(allPattern);
+    it("should throw error when Neo4j query fails", async () => {
+      mockSession.run.mockRejectedValue(new Error("Neo4j connection failed"));
 
-      const result = await service.getContractTypes();
+      await expect(service.getCategoriesList()).rejects.toThrow(
+        "Failed to fetch categories: Neo4j connection failed",
+      );
+      expect(mockSession.close).toHaveBeenCalled();
+    });
 
-      // All types should be non-empty strings
-      result.types.forEach((type) => {
-        expect(typeof type).toBe("string");
-        expect(type.length).toBeGreaterThan(0);
+    it("should always close session even on error", async () => {
+      mockSession.run.mockRejectedValue(new Error("Test error"));
+
+      await expect(service.getCategoriesList()).rejects.toThrow();
+
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should filter out null categories using WHERE clause", async () => {
+      const mockRecords = [{ get: () => "api" }, { get: () => "service" }];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
+
+      await service.getCategoriesList();
+
+      const callArg = mockSession.run.mock.calls[0][0];
+      expect(callArg).toContain("WHERE m.category IS NOT NULL");
+    });
+
+    it("should return only distinct categories", async () => {
+      // The query uses DISTINCT, so Neo4j should only return unique values
+      const mockRecords = [
+        { get: () => "api" },
+        { get: () => "service" },
+        { get: () => "frontend" },
+      ];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
+
+      const result = await service.getCategoriesList();
+
+      // Verify all categories are unique
+      const uniqueCategories = [...new Set(result.categories)];
+      expect(result.categories).toEqual(uniqueCategories);
+
+      const callArg = mockSession.run.mock.calls[0][0];
+      expect(callArg).toContain("DISTINCT");
+    });
+
+    it("should handle database timeout error", async () => {
+      mockSession.run.mockRejectedValue(new Error("Database timeout"));
+
+      await expect(service.getCategoriesList()).rejects.toThrow(
+        "Failed to fetch categories: Database timeout",
+      );
+      expect(mockSession.close).toHaveBeenCalled();
+    });
+
+    it("should log fetching operation", async () => {
+      const loggerSpy = jest.spyOn(service["logger"], "log");
+      const mockRecords = [{ get: () => "api" }];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
+
+      await service.getCategoriesList();
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        "Fetching all unique contract categories from Neo4j",
+      );
+      expect(loggerSpy).toHaveBeenCalledWith("Found 1 unique categories");
+    });
+
+    it("should log error when query fails", async () => {
+      const loggerSpy = jest.spyOn(service["logger"], "error");
+      const errorMessage = "Connection error";
+      mockSession.run.mockRejectedValue(new Error(errorMessage));
+
+      await expect(service.getCategoriesList()).rejects.toThrow();
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        "Error fetching categories:",
+        errorMessage,
+      );
+    });
+
+    it("should return categories with correct DTO structure", async () => {
+      const mockRecords = [{ get: () => "api" }, { get: () => "service" }];
+      mockSession.run.mockResolvedValue({ records: mockRecords });
+
+      const result = await service.getCategoriesList();
+
+      expect(result).toHaveProperty("categories");
+      expect(Array.isArray(result.categories)).toBe(true);
+      result.categories.forEach((category) => {
+        expect(typeof category).toBe("string");
       });
-    });
-
-    it("should return count matching types array length", async () => {
-      const validPattern = path.join(testFixturesPath, "valid-*.yml");
-      jest.spyOn(configService, "get").mockReturnValue(validPattern);
-
-      const result = await service.getContractTypes();
-
-      expect(result.count).toBe(result.types.length);
     });
   });
 });
