@@ -52,7 +52,8 @@ export class SearchByDescriptionResponseDto {
   resultsCount: number;
 
   @ApiProperty({
-    description: "Array of module search results ordered by similarity (highest first)",
+    description:
+      "Array of module search results ordered by similarity (highest first)",
     type: [ModuleSearchResultDto],
   })
   results: ModuleSearchResultDto[];

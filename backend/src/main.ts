@@ -28,7 +28,9 @@ async function bootstrap() {
 
   console.log(`🚀 Backend server is running on: http://localhost:${port}`);
   console.log(`📚 API endpoints available at: http://localhost:${port}/api/*`);
-  console.log(`📚 API documentation available at: http://localhost:${port}/api-docs`);
+  console.log(
+    `📚 API documentation available at: http://localhost:${port}/api-docs`,
+  );
 }
 
 bootstrap();

@@ -24,6 +24,7 @@ import {
   SearchByDescriptionResponseDto,
   ModuleSearchResultDto,
 } from "./dto/search-by-description-response.dto";
+import { CategoriesResponseDto } from "./dto/categories-response.dto";
 
 @Injectable()
 export class ContractsService implements OnModuleInit {
@@ -115,9 +116,7 @@ export class ContractsService implements OnModuleInit {
    * Parse contracts and collect metadata for validation
    * First pass: Parse all contracts and collect their IDs and parts
    */
-  private parseContractsAndCollectMetadata(
-    files: string[],
-  ): {
+  private parseContractsAndCollectMetadata(files: string[]): {
     parsedContracts: Array<{
       file: string;
       fileName: string;
@@ -218,7 +217,9 @@ export class ContractsService implements OnModuleInit {
   /**
    * Validate contract against schema
    */
-  private validateSchema(contract: any): Array<{ path: string; message: string }> {
+  private validateSchema(
+    contract: any,
+  ): Array<{ path: string; message: string }> {
     const validationResult = ContractSchema.safeParse(contract);
     const errors: Array<{ path: string; message: string }> = [];
 
@@ -567,7 +568,6 @@ export class ContractsService implements OnModuleInit {
 
       // Execute all data operations in a single write transaction for atomicity
       const result = await session.executeWrite(async (tx) => {
-
         this.logger.log(
           `Starting to apply ${contractFiles.length} contracts to Neo4j`,
         );
@@ -578,7 +578,7 @@ export class ContractsService implements OnModuleInit {
         // Process each contract
         for (const contractFile of contractFiles) {
           const contract = contractFile.content;
-          
+
           // Generate embedding for the description if embedding service is ready
           let embedding: number[] | null = null;
           if (this.embeddingService.isReady()) {
@@ -794,7 +794,9 @@ export class ContractsService implements OnModuleInit {
       }
 
       // Calculate statistics
-      const modifiedCount = changes.filter((c) => c.status === "modified").length;
+      const modifiedCount = changes.filter(
+        (c) => c.status === "modified",
+      ).length;
       const addedCount = changes.filter((c) => c.status === "added").length;
       const removedCount = changes.filter((c) => c.status === "removed").length;
 
@@ -811,8 +813,13 @@ export class ContractsService implements OnModuleInit {
         changes,
       };
     } catch (error) {
-      this.logger.error("Error checking contract modifications:", error.message);
-      throw new Error(`Failed to check contract modifications: ${error.message}`);
+      this.logger.error(
+        "Error checking contract modifications:",
+        error.message,
+      );
+      throw new Error(
+        `Failed to check contract modifications: ${error.message}`,
+      );
     } finally {
       await session.close();
     }
@@ -937,7 +944,8 @@ export class ContractsService implements OnModuleInit {
     try {
       // Generate embedding for the search query
       this.logger.log(`Generating embedding for search query: "${query}"`);
-      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+      const queryEmbedding =
+        await this.embeddingService.generateEmbedding(query);
       this.logger.log(
         `Generated query embedding with ${queryEmbedding.length} dimensions`,
       );
@@ -996,6 +1004,44 @@ export class ContractsService implements OnModuleInit {
       throw new Error(
         `Failed to search modules by description: ${error.message}`,
       );
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Get all unique contract categories from Neo4j database
+   * @returns Object with array of unique category names
+   */
+  async getCategoriesList(): Promise<CategoriesResponseDto> {
+    const session = this.neo4jService.getSession();
+
+    try {
+      this.logger.log("Fetching all unique contract categories from Neo4j");
+
+      // Query Neo4j to get all unique categories
+      const result = await session.run(
+        `
+        MATCH (m:Module)
+        WHERE m.category IS NOT NULL
+        RETURN DISTINCT m.category AS category
+        ORDER BY category ASC
+        `,
+      );
+
+      // Extract categories from the result
+      const categories: string[] = result.records.map((record) =>
+        record.get("category"),
+      );
+
+      this.logger.log(`Found ${categories.length} unique categories`);
+
+      return {
+        categories,
+      };
+    } catch (error) {
+      this.logger.error("Error fetching categories:", error.message);
+      throw new Error(`Failed to fetch categories: ${error.message}`);
     } finally {
       await session.close();
     }

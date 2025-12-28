@@ -8,7 +8,13 @@ import {
   NotFoundException,
   Query,
 } from "@nestjs/common";
-import { ApiOperation, ApiResponse, ApiTags, ApiParam, ApiQuery } from "@nestjs/swagger";
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiParam,
+  ApiQuery,
+} from "@nestjs/swagger";
 import { ContractsService } from "./contracts.service";
 import { ContractFileDto } from "./dto/contract-response.dto";
 import { ValidationResponseDto } from "./dto/validation-response.dto";
@@ -16,6 +22,7 @@ import { ApplyResponseDto } from "./dto/apply-response.dto";
 import { CheckModifiedResponseDto } from "./dto/check-modified-response.dto";
 import { ModuleRelationsResponseDto } from "./dto/module-relations-response.dto";
 import { SearchByDescriptionResponseDto } from "./dto/search-by-description-response.dto";
+import { CategoriesResponseDto } from "./dto/categories-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -176,7 +183,8 @@ export class ContractsController {
   })
   @ApiResponse({
     status: 500,
-    description: "Failed to perform search (embedding service not ready or Neo4j error)",
+    description:
+      "Failed to perform search (embedding service not ready or Neo4j error)",
   })
   async searchByDescription(
     @Query("query") query: string,
@@ -184,7 +192,9 @@ export class ContractsController {
   ): Promise<SearchByDescriptionResponseDto> {
     // Validate query parameter
     if (!query || query.trim().length === 0) {
-      throw new BadRequestException("Search query is required and cannot be empty");
+      throw new BadRequestException(
+        "Search query is required and cannot be empty",
+      );
     }
 
     // Parse and validate limit parameter
@@ -197,7 +207,10 @@ export class ContractsController {
     }
 
     try {
-      return await this.contractsService.searchByDescription(query, parsedLimit);
+      return await this.contractsService.searchByDescription(
+        query,
+        parsedLimit,
+      );
     } catch (error) {
       if (error.message.includes("Embedding service is not ready")) {
         throw new InternalServerErrorException(
@@ -209,6 +222,31 @@ export class ContractsController {
       }
       throw new InternalServerErrorException(
         `Failed to search modules: ${error.message}`,
+      );
+    }
+  }
+
+  @Get("categories")
+  @ApiOperation({
+    summary: "Get all contract categories",
+    description:
+      "Returns a list of all unique contract category names from the Neo4j database",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns array of unique category names",
+    type: CategoriesResponseDto,
+  })
+  @ApiResponse({
+    status: 500,
+    description: "Failed to fetch categories",
+  })
+  async getCategories(): Promise<CategoriesResponseDto> {
+    try {
+      return await this.contractsService.getCategoriesList();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Failed to fetch categories: ${error.message}`,
       );
     }
   }

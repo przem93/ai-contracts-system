@@ -7,7 +7,7 @@ env.allowLocalModels = false;
 /**
  * Service for generating text embeddings using the Xenova/all-MiniLM-L6-v2 model
  * from HuggingFace via @xenova/transformers
- * 
+ *
  * This model:
  * - Generates 384-dimensional embeddings
  * - Is optimized for semantic similarity tasks
