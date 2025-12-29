@@ -191,6 +191,35 @@ To verify the implementation:
    - Check that parts are included when present
    - Check that dependencies are included when present
 
+## Additional Changes
+
+### Contract Types Endpoint
+The `getContractTypes()` method was also updated to query Neo4j instead of reading from YAML files.
+
+**Before:**
+```typescript
+async getContractTypes() {
+  const contracts = await this.getAllContracts(); // Reads from files
+  // Extract unique types...
+}
+```
+
+**After:**
+```typescript
+async getContractTypes() {
+  const session = this.neo4jService.getSession();
+  const result = await session.run(`
+    MATCH (m:Module)
+    WHERE m.type IS NOT NULL
+    RETURN DISTINCT m.type AS type
+    ORDER BY type ASC
+  `);
+  // Extract types from Neo4j result...
+}
+```
+
+This ensures consistency across all endpoints - both `getContractTypes()` and `getCategoriesList()` now operate exclusively on Neo4j data.
+
 ## Files Modified
 
 1. `/workspace/backend/src/contracts/contracts.service.ts` - Main implementation

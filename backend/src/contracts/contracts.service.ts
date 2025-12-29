@@ -918,24 +918,29 @@ export class ContractsService implements OnModuleInit {
   }
 
   /**
-   * Get all unique contract types from the current contracts
+   * Get all unique contract types from Neo4j database
    * @returns Object with array of unique contract types and their count
    */
   async getContractTypes(): Promise<{ types: string[]; count: number }> {
+    const session = this.neo4jService.getSession();
+
     try {
-      // Get all contracts
-      const contracts = await this.getAllContracts();
+      this.logger.log("Fetching all unique contract types from Neo4j");
 
-      // Extract unique types
-      const typesSet = new Set<string>();
-      contracts.forEach((contract) => {
-        if (contract.content.type) {
-          typesSet.add(contract.content.type);
-        }
-      });
+      // Query Neo4j to get all unique types
+      const result = await session.run(
+        `
+        MATCH (m:Module)
+        WHERE m.type IS NOT NULL
+        RETURN DISTINCT m.type AS type
+        ORDER BY type ASC
+        `,
+      );
 
-      // Convert to sorted array
-      const types = Array.from(typesSet).sort();
+      // Extract types from the result
+      const types: string[] = result.records.map((record) =>
+        record.get("type"),
+      );
 
       this.logger.log(`Found ${types.length} unique contract types: ${types.join(", ")}`);
 
@@ -946,6 +951,8 @@ export class ContractsService implements OnModuleInit {
     } catch (error) {
       this.logger.error("Error getting contract types:", error.message);
       throw new Error(`Failed to get contract types: ${error.message}`);
+    } finally {
+      await session.close();
     }
   }
 
