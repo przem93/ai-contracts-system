@@ -142,8 +142,8 @@ test.describe('Contracts List Page', () => {
     await contractsPage.navigate();
     await contractsPage.waitForContractsToLoad();
 
-    // Verify error alert is displayed
-    const errorAlert = new Alert(contractsPage.errorAlert);
+    // Verify check-modified error alert is displayed
+    const errorAlert = new Alert(contractsPage.checkModifiedErrorAlert);
     await errorAlert.verifyIsVisible();
     await errorAlert.verifyText('Error checking contract modifications');
   });
