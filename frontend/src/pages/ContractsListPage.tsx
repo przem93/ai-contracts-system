@@ -28,6 +28,20 @@ function ContractsListPage() {
     error: checkModifiedError 
   } = useContractsControllerCheckIfContractsModified();
 
+  // Filter contracts to show only modified/new ones
+  const modifiedContracts = contracts?.filter(contract => {
+    if (!checkModifiedData?.changes) return false;
+    return checkModifiedData.changes.some(change => 
+      change.filePath === contract.filePath
+    );
+  }) || [];
+
+  // Get the status for a contract
+  const getContractStatus = (filePath: string): 'modified' | 'added' | 'removed' | undefined => {
+    const change = checkModifiedData?.changes?.find(c => c.filePath === filePath);
+    return change?.status;
+  };
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ 
@@ -61,30 +75,28 @@ function ContractsListPage() {
           <Card sx={{ width: '100%', mt: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                📋 Contracts List
+                📋 Modified/New Contracts
               </Typography>
               
-              {isLoading && (
+              {(isLoading || isCheckingModified) ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                   <CircularProgress />
                 </Box>
-              )}
-              
-              {error && (
+              ) : error ? (
                 <Alert severity="error">
                   Error loading contracts: {error instanceof Error ? error.message : 'Unknown error'}
                 </Alert>
-              )}
-              
-              {contracts && contracts.length === 0 && (
-                <Alert severity="info">
-                  No contracts found
+              ) : checkModifiedError ? (
+                <Alert severity="error">
+                  Error checking contract modifications: {(checkModifiedError as Error)?.message || 'Unknown error'}
                 </Alert>
-              )}
-              
-              {contracts && contracts.length > 0 && (
+              ) : modifiedContracts.length === 0 ? (
+                <Alert severity="info">
+                  No modified or new contracts found. All contracts are up to date with the database.
+                </Alert>
+              ) : (
                 <Stack spacing={2} sx={{ mt: 2 }}>
-                  {contracts.map((contract, index) => (
+                  {modifiedContracts.map((contract, index) => (
                     <ContractCard
                       key={index}
                       fileName={contract.fileName}
@@ -92,24 +104,13 @@ function ContractsListPage() {
                       id={contract.content?.id as string}
                       type={contract.content?.type as string}
                       category={contract.content?.category as string}
+                      status={getContractStatus(contract.filePath)}
                     />
                   ))}
                 </Stack>
               )}
             </CardContent>
           </Card>
-
-          {checkModifiedError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              Error checking contract modifications: {checkModifiedError instanceof Error ? checkModifiedError.message : 'Unknown error'}
-            </Alert>
-          )}
-
-          {checkModifiedData && !checkModifiedData.hasChanges && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              No changes detected. All contracts are up to date with the database.
-            </Alert>
-          )}
 
           <Button
             variant="contained"
