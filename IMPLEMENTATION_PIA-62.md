@@ -196,6 +196,38 @@ To verify the implementation:
 1. `/workspace/backend/src/contracts/contracts.service.ts` - Main implementation
 2. `/workspace/backend/src/contracts/contracts.service.spec.ts` - Updated tests
 
+## Bug Fix: Aggregation Error
+
+### Issue
+After initial implementation, a Neo4j aggregation error occurred:
+```
+Aggregation column contains implicit grouping expressions... Illegal expression(s): p
+```
+
+### Root Cause
+The Cypher queries incorrectly used `CASE WHEN p IS NOT NULL` with `collect()`. When using aggregation functions like `collect()`, you cannot reference individual nodes in conditional expressions before aggregation.
+
+### Solution
+Simplified the queries to:
+1. Use `collect()` directly without CASE statements
+2. Filter out null values in the application code after retrieval
+
+**Updated Cypher pattern:**
+```cypher
+OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
+WITH m, collect({id: p.part_id, type: p.type}) AS parts
+```
+
+**Result filtering in code:**
+```typescript
+const filteredParts = parts.filter((p: any) => p.id !== null && p.type !== null);
+```
+
+This approach:
+- ✅ Eliminates aggregation errors
+- ✅ Handles empty collections properly
+- ✅ Maintains correct behavior for modules with no parts/dependencies
+
 ## Summary
 
 The search endpoint now operates **exclusively on Neo4j database data**, meeting the acceptance criteria for PIA-62. The implementation improves performance, ensures data consistency, and maintains backward compatibility with the existing API contract.

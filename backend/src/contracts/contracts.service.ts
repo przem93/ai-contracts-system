@@ -1014,17 +1014,9 @@ export class ContractsService implements OnModuleInit {
                ) AS similarity
           WHERE similarity > 0
           OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
-          WITH m, similarity, 
-               CASE WHEN p IS NOT NULL 
-                 THEN collect({id: p.part_id, type: p.type}) 
-                 ELSE [] 
-               END AS parts
+          WITH m, similarity, collect({id: p.part_id, type: p.type}) AS parts
           OPTIONAL MATCH (m)-[dep:MODULE_DEPENDENCY]->(depModule:Module)
-          WITH m, similarity, parts,
-               CASE WHEN depModule IS NOT NULL
-                 THEN collect({module_id: depModule.module_id, parts: dep.parts})
-                 ELSE []
-               END AS dependencies
+          WITH m, similarity, parts, collect({module_id: depModule.module_id, parts: dep.parts}) AS dependencies
           RETURN m.module_id AS module_id,
                  m.type AS type,
                  m.description AS description,
@@ -1050,11 +1042,16 @@ export class ContractsService implements OnModuleInit {
           const dependencies = record.get("dependencies");
           const similarity = record.get("similarity");
 
-          // Parse dependencies (convert JSON strings back to objects)
-          const parsedDependencies = dependencies.map((dep: any) => ({
-            module_id: dep.module_id,
-            parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
-          }));
+          // Filter out null values from parts (when OPTIONAL MATCH has no results)
+          const filteredParts = parts.filter((p: any) => p.id !== null && p.type !== null);
+
+          // Filter out null values from dependencies and parse parts JSON
+          const filteredDependencies = dependencies
+            .filter((dep: any) => dep.module_id !== null)
+            .map((dep: any) => ({
+              module_id: dep.module_id,
+              parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
+            }));
 
           // Build contract content from Neo4j data
           const contractContent: Contract = {
@@ -1065,13 +1062,13 @@ export class ContractsService implements OnModuleInit {
           };
 
           // Add parts if they exist
-          if (parts && parts.length > 0) {
-            contractContent.parts = parts;
+          if (filteredParts.length > 0) {
+            contractContent.parts = filteredParts;
           }
 
           // Add dependencies if they exist
-          if (parsedDependencies && parsedDependencies.length > 0) {
-            contractContent.dependencies = parsedDependencies;
+          if (filteredDependencies.length > 0) {
+            contractContent.dependencies = filteredDependencies;
           }
 
           return {
@@ -1123,17 +1120,9 @@ export class ContractsService implements OnModuleInit {
           MATCH (m:Module)
           ${whereClause}
           OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
-          WITH m, 
-               CASE WHEN p IS NOT NULL 
-                 THEN collect({id: p.part_id, type: p.type}) 
-                 ELSE [] 
-               END AS parts
+          WITH m, collect({id: p.part_id, type: p.type}) AS parts
           OPTIONAL MATCH (m)-[dep:MODULE_DEPENDENCY]->(depModule:Module)
-          WITH m, parts,
-               CASE WHEN depModule IS NOT NULL
-                 THEN collect({module_id: depModule.module_id, parts: dep.parts})
-                 ELSE []
-               END AS dependencies
+          WITH m, parts, collect({module_id: depModule.module_id, parts: dep.parts}) AS dependencies
           RETURN m.module_id AS module_id,
                  m.type AS type,
                  m.description AS description,
@@ -1157,11 +1146,16 @@ export class ContractsService implements OnModuleInit {
           const parts = record.get("parts");
           const dependencies = record.get("dependencies");
 
-          // Parse dependencies (convert JSON strings back to objects)
-          const parsedDependencies = dependencies.map((dep: any) => ({
-            module_id: dep.module_id,
-            parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
-          }));
+          // Filter out null values from parts (when OPTIONAL MATCH has no results)
+          const filteredParts = parts.filter((p: any) => p.id !== null && p.type !== null);
+
+          // Filter out null values from dependencies and parse parts JSON
+          const filteredDependencies = dependencies
+            .filter((dep: any) => dep.module_id !== null)
+            .map((dep: any) => ({
+              module_id: dep.module_id,
+              parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
+            }));
 
           // Build contract content from Neo4j data
           const contractContent: Contract = {
@@ -1172,13 +1166,13 @@ export class ContractsService implements OnModuleInit {
           };
 
           // Add parts if they exist
-          if (parts && parts.length > 0) {
-            contractContent.parts = parts;
+          if (filteredParts.length > 0) {
+            contractContent.parts = filteredParts;
           }
 
           // Add dependencies if they exist
-          if (parsedDependencies && parsedDependencies.length > 0) {
-            contractContent.dependencies = parsedDependencies;
+          if (filteredDependencies.length > 0) {
+            contractContent.dependencies = filteredDependencies;
           }
 
           return {
