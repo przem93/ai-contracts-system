@@ -15,6 +15,8 @@ export interface ContractCardProps {
   category?: string;
   description?: string;
   status?: 'modified' | 'added' | 'removed';
+  onClick?: () => void;
+  clickable?: boolean;
 }
 
 function ContractCard({ 
@@ -24,7 +26,9 @@ function ContractCard({
   type, 
   category, 
   description,
-  status
+  status,
+  onClick,
+  clickable = false
 }: ContractCardProps) {
   // Map status to chip color and label
   const getStatusChip = () => {
@@ -48,7 +52,19 @@ function ContractCard({
   };
 
   return (
-    <Card variant="outlined" data-testid="contract-card">
+    <Card 
+      variant="outlined" 
+      data-testid="contract-card"
+      onClick={clickable && onClick ? onClick : undefined}
+      sx={{
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': clickable ? {
+          transform: 'translateY(-2px)',
+          boxShadow: 3,
+        } : {}
+      }}
+    >
       <CardContent>
         <Stack spacing={2}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
