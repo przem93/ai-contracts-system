@@ -15,6 +15,9 @@ Updated the Contracts List Page to display only modified/new contracts instead o
 - Updated the "no contracts" message to "No modified or new contracts found. All contracts are up to date with the database."
 - Refactored conditional rendering to use ternary operators for better TypeScript type inference
 - Pass the `status` prop to each `ContractCard` component
+- Loading spinner now only shows while contracts are loading (not while checking modifications)
+- Check modifications status is indicated by the button text ("Checking for changes..." vs "Verify Contracts")
+- Separate alerts for check-modified errors and "no changes detected" status appear below the card
 
 **Logic:**
 ```typescript

@@ -78,7 +78,7 @@ function ContractsListPage() {
                 📋 Modified/New Contracts
               </Typography>
               
-              {(isLoading || isCheckingModified) ? (
+              {isLoading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
                   <CircularProgress />
                 </Box>
@@ -86,15 +86,11 @@ function ContractsListPage() {
                 <Alert severity="error">
                   Error loading contracts: {error instanceof Error ? error.message : 'Unknown error'}
                 </Alert>
-              ) : checkModifiedError ? (
-                <Alert severity="error">
-                  Error checking contract modifications: {(checkModifiedError as Error)?.message || 'Unknown error'}
-                </Alert>
-              ) : modifiedContracts.length === 0 ? (
+              ) : modifiedContracts.length === 0 && !isCheckingModified ? (
                 <Alert severity="info">
                   No modified or new contracts found. All contracts are up to date with the database.
                 </Alert>
-              ) : (
+              ) : modifiedContracts.length > 0 ? (
                 <Stack spacing={2} sx={{ mt: 2 }}>
                   {modifiedContracts.map((contract, index) => (
                     <ContractCard
@@ -108,9 +104,21 @@ function ContractsListPage() {
                     />
                   ))}
                 </Stack>
-              )}
+              ) : null}
             </CardContent>
           </Card>
+
+          {checkModifiedError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              Error checking contract modifications: {(checkModifiedError as Error)?.message || 'Unknown error'}
+            </Alert>
+          )}
+
+          {checkModifiedData && !checkModifiedData.hasChanges && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              No changes detected. All contracts are up to date with the database.
+            </Alert>
+          )}
 
           <Button
             variant="contained"
