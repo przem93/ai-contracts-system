@@ -14,6 +14,7 @@ export interface ContractCardProps {
   type?: string;
   category?: string;
   description?: string;
+  status?: 'modified' | 'added' | 'removed';
 }
 
 function ContractCard({ 
@@ -22,24 +23,49 @@ function ContractCard({
   id, 
   type, 
   category, 
-  description 
+  description,
+  status
 }: ContractCardProps) {
+  // Map status to chip color and label
+  const getStatusChip = () => {
+    if (!status) return null;
+    
+    const statusConfig = {
+      added: { color: 'success' as const, label: '✨ New', icon: '✨' },
+      modified: { color: 'warning' as const, label: '🔄 Modified', icon: '🔄' },
+      removed: { color: 'error' as const, label: '🗑️ Removed', icon: '🗑️' }
+    };
+    
+    const config = statusConfig[status];
+    return (
+      <Chip 
+        label={config.label}
+        size="small"
+        color={config.color}
+        sx={{ fontWeight: 600 }}
+      />
+    );
+  };
+
   return (
     <Card variant="outlined" data-testid="contract-card">
       <CardContent>
         <Stack spacing={2}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
             <Typography variant="h6">
               📄 {fileName}
             </Typography>
-            {category && (
-              <Chip 
-                label={category} 
-                size="small"
-                color="primary"
-                variant="outlined"
-              />
-            )}
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {getStatusChip()}
+              {category && (
+                <Chip 
+                  label={category} 
+                  size="small"
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+            </Box>
           </Box>
           
           <Typography variant="body2" color="text.secondary">

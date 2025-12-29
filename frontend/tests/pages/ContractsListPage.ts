@@ -26,10 +26,10 @@ export class ContractsListPage extends BasePage {
     this.pageTitle = page.getByRole('heading', { name: 'AI Contracts System', level: 1 });
     this.pageSubtitle = page.getByRole('heading', { name: 'AI Coder Agent Contract Systems', level: 5 });
     this.contractsCard = page.locator('.MuiCard-root').first();
-    this.contractsCardTitle = page.getByRole('heading', { name: '📋 Contracts List' });
+    this.contractsCardTitle = page.getByRole('heading', { name: '📋 Modified/New Contracts' });
     this.loadingSpinner = page.getByRole('progressbar');
     this.errorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error loading contracts' });
-    this.noContractsAlert = page.locator('[role="alert"]').filter({ hasText: 'No contracts found' });
+    this.noContractsAlert = page.locator('[role="alert"]').filter({ hasText: 'No modified or new contracts found' });
     this.contractCards = page.getByTestId('contract-card');
     this.verifyContractsButton = page.getByTestId('verify-contracts-button');
     this.checkModifiedErrorAlert = page.locator('[role="alert"]').filter({ hasText: 'Error checking contract modifications' });

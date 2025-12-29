@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { ContractsListPage } from './pages/ContractsListPage';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { Alert } from './components/Alert';
-import { mockContracts, mockApiResponses } from './fixtures/contracts-data';
+import { mockContracts, mockApiResponses, mockCheckModifiedApiResponses } from './fixtures/contracts-data';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,7 +30,7 @@ test.describe('Contracts List Page', () => {
     await expect(contractsPage.pageSubtitle).toHaveText('AI Coder Agent Contract Systems');
     
     await expect(contractsPage.contractsCardTitle).toBeVisible();
-    await expect(contractsPage.contractsCardTitle).toHaveText('📋 Contracts List');
+    await expect(contractsPage.contractsCardTitle).toHaveText('📋 Modified/New Contracts');
   });
 
   test('should show loading spinner while fetching contracts', async ({ page }) => {
@@ -44,6 +44,10 @@ test.describe('Contracts List Page', () => {
         });
       });
 
+      await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+        await route.fulfill(mockCheckModifiedApiResponses.noChanges);
+      });
+
       await contractsPage.navigate();
 
       const spinner = new LoadingSpinner(contractsPage.loadingSpinner);
@@ -53,20 +57,24 @@ test.describe('Contracts List Page', () => {
     }
   });
 
-  test('should display contracts when API returns data', async ({ page }) => {
-    // Mock API response with sample contracts
+  test('should display only modified/new contracts when API returns data with changes', async ({ page }) => {
+    // Mock API responses - both contracts endpoint and check-modified endpoint
     await page.route('**/api/contracts', async (route) => {
       await route.fulfill(mockApiResponses.success(mockContracts.validContracts));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill(mockCheckModifiedApiResponses.hasChanges);
     });
 
     await contractsPage.navigate();
     await contractsPage.waitForContractsToLoad();
 
-    // Verify contracts are displayed
+    // Verify only 2 modified/new contracts are displayed (as defined in mockCheckModified.hasChanges)
     const contractsCount = await contractsPage.getContractsCount();
     expect(contractsCount).toBe(2);
 
-    // Verify first contract details
+    // Verify first contract details (modified)
     const firstContract = await contractsPage.getContractDetails(0);
     expect(firstContract.fileName).toBe('example-contract.yml');
     expect(firstContract.filePath).toBe('/contracts/example-contract.yml');
@@ -74,7 +82,7 @@ test.describe('Contracts List Page', () => {
     expect(firstContract.type).toBe('controller');
     expect(firstContract.category).toBe('api');
 
-    // Verify second contract details
+    // Verify second contract details (added)
     const secondContract = await contractsPage.getContractDetails(1);
     expect(secondContract.fileName).toBe('example-dependency.yml');
     expect(secondContract.filePath).toBe('/contracts/example-dependency.yml');
@@ -83,25 +91,33 @@ test.describe('Contracts List Page', () => {
     expect(secondContract.category).toBe('service');
   });
 
-  test('should display "No contracts found" message when API returns empty array', async ({ page }) => {
-    // Mock API response with empty array
+  test('should display "No modified or new contracts" message when there are no changes', async ({ page }) => {
+    // Mock API response with contracts but no changes
     await page.route('**/api/contracts', async (route) => {
-      await route.fulfill(mockApiResponses.empty);
+      await route.fulfill(mockApiResponses.success(mockContracts.validContracts));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill(mockCheckModifiedApiResponses.noChanges);
     });
 
     await contractsPage.navigate();
     await contractsPage.waitForContractsToLoad();
 
-    // Verify "no contracts" alert is displayed
+    // Verify "no modified or new contracts" alert is displayed
     const noContractsAlert = new Alert(contractsPage.noContractsAlert);
     await noContractsAlert.verifyIsVisible();
-    await noContractsAlert.verifyText('No contracts found');
+    await noContractsAlert.verifyText('No modified or new contracts found');
   });
 
-  test('should display error message when API fails', async ({ page }) => {
+  test('should display error message when contracts API fails', async ({ page }) => {
     // Mock API to return error
     await page.route('**/api/contracts', async (route) => {
       await route.fulfill(mockApiResponses.serverError);
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill(mockCheckModifiedApiResponses.hasChanges);
     });
 
     await contractsPage.navigate();
@@ -111,6 +127,25 @@ test.describe('Contracts List Page', () => {
     const errorAlert = new Alert(contractsPage.errorAlert);
     await errorAlert.verifyIsVisible();
     await errorAlert.verifyText('Error loading contracts');
+  });
+
+  test('should display error message when check-modified API fails', async ({ page }) => {
+    // Mock contracts API to succeed but check-modified to fail
+    await page.route('**/api/contracts', async (route) => {
+      await route.fulfill(mockApiResponses.success(mockContracts.validContracts));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill(mockCheckModifiedApiResponses.serverError);
+    });
+
+    await contractsPage.navigate();
+    await contractsPage.waitForContractsToLoad();
+
+    // Verify check-modified error alert is displayed
+    const errorAlert = new Alert(contractsPage.checkModifiedErrorAlert);
+    await errorAlert.verifyIsVisible();
+    await errorAlert.verifyText('Error checking contract modifications');
   });
 
   test('should display error message when network fails', async ({ page }) => {
@@ -119,6 +154,10 @@ test.describe('Contracts List Page', () => {
       await route.abort('failed');
     });
 
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill(mockCheckModifiedApiResponses.hasChanges);
+    });
+
     await contractsPage.navigate();
     await contractsPage.waitForContractsToLoad();
 
@@ -128,10 +167,36 @@ test.describe('Contracts List Page', () => {
     await errorAlert.verifyText('Error loading contracts');
   });
 
-  test('should display all contract details correctly', async ({ page }) => {
-    // Mock API response with detailed contract
+  test('should display modified contract details correctly with status badge', async ({ page }) => {
+    // Create a mock response with single modified contract
+    const singleModifiedContract = {
+      hasChanges: true,
+      totalChanges: 1,
+      modifiedCount: 1,
+      addedCount: 0,
+      removedCount: 0,
+      changes: [
+        {
+          moduleId: 'payment-service',
+          fileName: 'single-contract.yml',
+          filePath: '/contracts/single-contract.yml',
+          currentHash: 'a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1',
+          storedHash: 'b4e3d2c1b0a9f8e7d6c5b4a3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3',
+          status: 'modified',
+        },
+      ],
+    };
+
     await page.route('**/api/contracts', async (route) => {
       await route.fulfill(mockApiResponses.success([mockContracts.singleContract]));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(singleModifiedContract),
+      });
     });
 
     await contractsPage.navigate();
@@ -148,16 +213,58 @@ test.describe('Contracts List Page', () => {
     expect(exists).toBe(true);
   });
 
-  test('should handle multiple contracts with same type', async ({ page }) => {
-    // Mock API response with multiple contracts of same type
+  test('should handle multiple modified contracts with same type', async ({ page }) => {
+    // Create mock data for all 3 service contracts being modified
+    const multipleModifiedContracts = {
+      hasChanges: true,
+      totalChanges: 3,
+      modifiedCount: 3,
+      addedCount: 0,
+      removedCount: 0,
+      changes: [
+        {
+          moduleId: 'service-a',
+          fileName: 'service-a.yml',
+          filePath: '/contracts/service-a.yml',
+          currentHash: 'hash-a',
+          storedHash: 'old-hash-a',
+          status: 'modified' as const,
+        },
+        {
+          moduleId: 'service-b',
+          fileName: 'service-b.yml',
+          filePath: '/contracts/service-b.yml',
+          currentHash: 'hash-b',
+          storedHash: 'old-hash-b',
+          status: 'modified' as const,
+        },
+        {
+          moduleId: 'service-c',
+          fileName: 'service-c.yml',
+          filePath: '/contracts/service-c.yml',
+          currentHash: 'hash-c',
+          storedHash: 'old-hash-c',
+          status: 'modified' as const,
+        },
+      ],
+    };
+
     await page.route('**/api/contracts', async (route) => {
       await route.fulfill(mockApiResponses.success(mockContracts.serviceContracts));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(multipleModifiedContracts),
+      });
     });
 
     await contractsPage.navigate();
     await contractsPage.waitForContractsToLoad();
 
-    // Verify all contracts are displayed
+    // Verify all 3 modified contracts are displayed
     const contractsCount = await contractsPage.getContractsCount();
     expect(contractsCount).toBe(3);
 
@@ -168,10 +275,52 @@ test.describe('Contracts List Page', () => {
     expect(fileNames).toContain('service-c.yml');
   });
 
-  test('should handle contracts with different categories', async ({ page }) => {
-    // Mock API response with contracts from different categories
+  test('should handle modified contracts with different categories', async ({ page }) => {
+    // Create mock data for mixed category contracts being modified
+    const mixedModifiedContracts = {
+      hasChanges: true,
+      totalChanges: 3,
+      modifiedCount: 2,
+      addedCount: 1,
+      removedCount: 0,
+      changes: [
+        {
+          moduleId: 'users-controller',
+          fileName: 'api-controller.yml',
+          filePath: '/contracts/api-controller.yml',
+          currentHash: 'hash-api',
+          storedHash: 'old-hash-api',
+          status: 'modified' as const,
+        },
+        {
+          moduleId: 'users-service',
+          fileName: 'business-service.yml',
+          filePath: '/contracts/business-service.yml',
+          currentHash: 'hash-service',
+          storedHash: 'old-hash-service',
+          status: 'modified' as const,
+        },
+        {
+          moduleId: 'users-table',
+          fileName: 'ui-component.yml',
+          filePath: '/contracts/ui-component.yml',
+          currentHash: 'hash-frontend',
+          storedHash: null,
+          status: 'added' as const,
+        },
+      ],
+    };
+
     await page.route('**/api/contracts', async (route) => {
       await route.fulfill(mockApiResponses.success(mockContracts.mixedCategoryContracts));
+    });
+
+    await page.route('**/api/contracts/check-if-contract-modified', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mixedModifiedContracts),
+      });
     });
 
     await contractsPage.navigate();
