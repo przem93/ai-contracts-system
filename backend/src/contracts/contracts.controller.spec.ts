@@ -1458,7 +1458,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         "service",
         undefined,
       );
@@ -1485,7 +1485,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         undefined,
         "backend",
       );
@@ -1512,7 +1512,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         "service",
         "backend",
       );
@@ -1580,7 +1580,7 @@ describe("ContractsController", () => {
 
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "test query",
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1624,7 +1624,7 @@ describe("ContractsController", () => {
       expect(result.query).toBe(queryWithSpecialChars);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         queryWithSpecialChars,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1646,7 +1646,7 @@ describe("ContractsController", () => {
       expect(result.query).toBe(longQuery);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         longQuery,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1695,7 +1695,7 @@ describe("ContractsController", () => {
       // Note: Controller validates trimmed query, but passes original to service
       expect(service.searchByDescription).toHaveBeenCalledWith(
         query,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1721,7 +1721,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         "service",
         undefined,
       );
@@ -1748,7 +1748,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         undefined,
         "backend",
       );
@@ -1775,7 +1775,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         "service",
         "backend",
       );
