@@ -562,11 +562,11 @@ export function useContractsControllerGetModuleRelations<TData = Awaited<ReturnT
 
 
 /**
- * Searches for modules using embedding-based semantic similarity. The query description is embedded and compared against stored module embeddings to find the most similar modules.
- * @summary Search modules by description using semantic similarity
+ * Search for modules using semantic similarity (when query is provided) and/or filter by type and category. At least one parameter (query, type, or category) must be provided.
+ * @summary Search and filter modules
  */
 export const contractsControllerSearchByDescription = (
-    params: ContractsControllerSearchByDescriptionParams,
+    params?: ContractsControllerSearchByDescriptionParams,
  signal?: AbortSignal
 ) => {
       
@@ -588,7 +588,7 @@ export const getContractsControllerSearchByDescriptionQueryKey = (params?: Contr
     }
 
     
-export const getContractsControllerSearchByDescriptionQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+export const getContractsControllerSearchByDescriptionQueryOptions = <TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(params?: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -611,7 +611,7 @@ export type ContractsControllerSearchByDescriptionQueryError = void | void
 
 
 export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
- params: ContractsControllerSearchByDescriptionParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
+ params: undefined |  ContractsControllerSearchByDescriptionParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof contractsControllerSearchByDescription>>,
           TError,
@@ -621,7 +621,7 @@ export function useContractsControllerSearchByDescription<TData = Awaited<Return
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
- params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
+ params?: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof contractsControllerSearchByDescription>>,
           TError,
@@ -631,15 +631,15 @@ export function useContractsControllerSearchByDescription<TData = Awaited<Return
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
- params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+ params?: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Search modules by description using semantic similarity
+ * @summary Search and filter modules
  */
 
 export function useContractsControllerSearchByDescription<TData = Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError = void | void>(
- params: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
+ params?: ContractsControllerSearchByDescriptionParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof contractsControllerSearchByDescription>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 

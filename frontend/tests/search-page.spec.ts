@@ -47,22 +47,60 @@ test.describe('Search Page with Category and Type Select', () => {
     await page.route('**/api/contracts/search*', async (route) => {
       const url = new URL(route.request().url());
       const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
       
-      // Return appropriate mock data based on search query
-      if (query.toLowerCase().includes('user')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
-      } else if (query.toLowerCase().includes('service')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
-      } else if (query.toLowerCase().includes('authentication')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.authSearch));
-      } else if (query.toLowerCase().includes('database')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.databaseSearch));
-      } else if (query.toLowerCase().includes('xyznonexistent')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.emptySearch));
-      } else {
-        // Default: return service search results for generic "test" queries
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
+      // Filter mock data based on type and category parameters
+      let dataToReturn = mockContracts.mixedCategoryContracts;
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
       }
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      // If there's a query, use specific mock data
+      if (query) {
+        if (query.toLowerCase().includes('user')) {
+          dataToReturn = mockSearchResults.userSearch.results;
+        } else if (query.toLowerCase().includes('service')) {
+          dataToReturn = mockSearchResults.serviceSearch.results;
+        } else if (query.toLowerCase().includes('authentication')) {
+          dataToReturn = mockSearchResults.authSearch.results;
+        } else if (query.toLowerCase().includes('database')) {
+          dataToReturn = mockSearchResults.databaseSearch.results;
+        } else if (query.toLowerCase().includes('xyznonexistent')) {
+          dataToReturn = [];
+        } else {
+          dataToReturn = mockSearchResults.serviceSearch.results;
+        }
+        
+        // Apply filters to search results too
+        if (category) {
+          dataToReturn = dataToReturn.filter((contract: any) => 
+            contract.content.category === category
+          );
+        }
+        if (type) {
+          dataToReturn = dataToReturn.filter((contract: any) => 
+            contract.content.type === type
+          );
+        }
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
@@ -85,11 +123,16 @@ test.describe('Search Page with Category and Type Select', () => {
     await expect(searchPage.typeSelect).toBeVisible();
   });
 
-  test('should display initial info alert when no filters are active', async () => {
-    // Verify info alert is displayed
-    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
-    await expect(infoAlert).toContainText('Select a category or type, or search by description');
+  test('should display all contracts from Neo4j on page load', async () => {
+    // Verify contracts are displayed immediately (from Neo4j search endpoint)
+    // The search endpoint is called with no parameters, returning all contracts
+    await searchPage.page.waitForTimeout(500); // Wait for API call
+    
+    const contractCards = searchPage.page.getByTestId('contract-card');
+    const count = await contractCards.count();
+    
+    // Should display contracts (at least the ones we mocked)
+    expect(count).toBeGreaterThan(0);
   });
 
   test('should have "All Categories" selected by default', async () => {
@@ -221,16 +264,22 @@ test.describe('Search Page with Category and Type Select', () => {
     expect(newCount).toBeGreaterThanOrEqual(0);
   });
 
-  test('should clear info alert when starting to search', async () => {
-    // Initially, info alert should be visible
-    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
+  test('should update results when searching', async () => {
+    // Initially, all contracts from Neo4j should be displayed
+    await searchPage.page.waitForTimeout(500);
+    const initialCount = await searchPage.getContractsCount();
+    expect(initialCount).toBeGreaterThan(0);
     
     // Start searching
     await searchPage.search('test');
     
-    // Info alert should not be visible anymore
-    await expect(infoAlert).not.toBeVisible();
+    // Wait for search results
+    await searchPage.page.waitForTimeout(500);
+    
+    // Results should be updated (search endpoint called with query)
+    // We can't predict exact count, but the search should complete
+    const searchResultsCount = await searchPage.getContractsCount();
+    expect(searchResultsCount).toBeGreaterThanOrEqual(0); // May have 0 or more results
   });
 
   test('should allow filtering by category without search query', async () => {
@@ -637,6 +686,10 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     let contractsCount = await searchPage.getContractsCount();
     expect(contractsCount).toBe(3);
 
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.byCategorySearch));
+    });
+
     // Filter by API category
     await searchPage.selectCategory('Api');
     await page.waitForTimeout(300);
@@ -668,9 +721,35 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock search API with user search results (mixed types)
+    // Mock search API with filtering support
     await page.route('**/api/contracts/search*', async (route) => {
-      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+      const url = new URL(route.request().url());
+      const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
+      
+      // Start with user search results
+      let dataToReturn = mockSearchResults.userSearch.results;
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
@@ -716,9 +795,35 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock search API with user search results
+    // Mock search API with filtering support
     await page.route('**/api/contracts/search*', async (route) => {
-      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+      const url = new URL(route.request().url());
+      const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
+      
+      // Start with user search results
+      let dataToReturn = mockSearchResults.userSearch.results;
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
+      }
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
@@ -746,7 +851,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     expect(hasMatchingContract).toBe(true);
   });
 
-  test('should not call search API when query is empty and no filters selected', async ({ page }) => {
+  test('should call search API on page load to display all contracts from Neo4j', async ({ page }) => {
     let searchApiCalled = false;
     let allContractsApiCalled = false;
 
@@ -767,7 +872,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock get all contracts API to track if it's called
+    // Mock get all contracts API to track if it's called (should NOT be called)
     await page.route('**/api/contracts', async (route) => {
       if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
         allContractsApiCalled = true;
@@ -781,7 +886,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       }
     });
 
-    // Mock search API to track if it's called
+    // Mock search API to track if it's called (should BE called)
     await page.route('**/api/contracts/search*', async (route) => {
       searchApiCalled = true;
       await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
@@ -791,16 +896,19 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     await searchPage.navigate();
     await page.waitForTimeout(500);
 
-    // Verify info alert is shown
-    const infoAlert = page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
+    // Verify contracts are displayed from search API (Neo4j data)
+    const contractCards = page.getByTestId('contract-card');
+    const count = await contractCards.count();
+    expect(count).toBeGreaterThan(0);
 
-    // Verify neither API was called
-    expect(searchApiCalled).toBe(false);
+    // Verify search API was called (to get all contracts from Neo4j)
+    expect(searchApiCalled).toBe(true);
+    // Verify getAllContracts API was NOT called (we don't use file-based endpoint)
     expect(allContractsApiCalled).toBe(false);
   });
 
-  test('should call all contracts API when filtering without search query', async ({ page }) => {
+  test('should call search API when filtering without search query', async ({ page }) => {
+    let searchApiCalled = false;
     let allContractsApiCalled = false;
 
     // Mock supporting APIs
@@ -820,7 +928,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock get all contracts API
+    // Mock get all contracts API (should NOT be called)
     await page.route('**/api/contracts', async (route) => {
       if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
         allContractsApiCalled = true;
@@ -834,8 +942,9 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       }
     });
 
-    // Mock search API (should not be called)
+    // Mock search API (should be called)
     await page.route('**/api/contracts/search*', async (route) => {
+      searchApiCalled = true;
       await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
     });
 
@@ -847,8 +956,10 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     await searchPage.selectCategory('API');
     await page.waitForTimeout(500);
 
-    // Verify all contracts API was called
-    expect(allContractsApiCalled).toBe(true);
+    // Verify search API was called (now used for filtering from Neo4j)
+    expect(searchApiCalled).toBe(true);
+    // Verify getAllContracts API was NOT called (we use search API instead)
+    expect(allContractsApiCalled).toBe(false);
   });
 });
 

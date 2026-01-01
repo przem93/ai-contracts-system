@@ -1288,7 +1288,7 @@ describe("ContractsController", () => {
       expect(result.results).toHaveLength(3);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1319,7 +1319,7 @@ describe("ContractsController", () => {
       );
     });
 
-    it("should use default limit when not provided", async () => {
+    it("should use default limit of 50 when not provided", async () => {
       jest
         .spyOn(service, "searchByDescription")
         .mockResolvedValue(mockSearchResults);
@@ -1328,7 +1328,7 @@ describe("ContractsController", () => {
 
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1393,28 +1393,49 @@ describe("ContractsController", () => {
       expect(result.results).toEqual([]);
     });
 
-    it("should throw BadRequestException when no parameters are provided", async () => {
-      await expect(
-        controller.searchByDescription(undefined, undefined, undefined, undefined),
-      ).rejects.toThrow(BadRequestException);
+    it("should return all contracts when no parameters are provided", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
 
-      expect(service.searchByDescription).not.toHaveBeenCalled();
+      await controller.searchByDescription(undefined, undefined, undefined, undefined);
+
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        undefined,
+        50,
+        undefined,
+        undefined,
+      );
     });
 
-    it("should throw BadRequestException for empty query without other filters", async () => {
-      await expect(controller.searchByDescription("")).rejects.toThrow(
-        BadRequestException,
-      );
+    it("should return all contracts for empty query without other filters", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
 
-      expect(service.searchByDescription).not.toHaveBeenCalled();
+      await controller.searchByDescription("");
+
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        undefined,
+        50,
+        undefined,
+        undefined,
+      );
     });
 
-    it("should throw BadRequestException for whitespace-only query without other filters", async () => {
-      await expect(controller.searchByDescription("   ")).rejects.toThrow(
-        BadRequestException,
-      );
+    it("should return all contracts for whitespace-only query without other filters", async () => {
+      jest
+        .spyOn(service, "searchByDescription")
+        .mockResolvedValue(mockSearchResults);
 
-      expect(service.searchByDescription).not.toHaveBeenCalled();
+      await controller.searchByDescription("   ");
+
+      expect(service.searchByDescription).toHaveBeenCalledWith(
+        undefined,
+        50,
+        undefined,
+        undefined,
+      );
     });
 
     it("should allow filtering by type only without query", async () => {
@@ -1437,7 +1458,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         "service",
         undefined,
       );
@@ -1464,7 +1485,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         undefined,
         "backend",
       );
@@ -1491,7 +1512,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         undefined,
-        10,
+        50,
         "service",
         "backend",
       );
@@ -1559,7 +1580,7 @@ describe("ContractsController", () => {
 
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "test query",
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1603,7 +1624,7 @@ describe("ContractsController", () => {
       expect(result.query).toBe(queryWithSpecialChars);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         queryWithSpecialChars,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1625,7 +1646,7 @@ describe("ContractsController", () => {
       expect(result.query).toBe(longQuery);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         longQuery,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1674,7 +1695,7 @@ describe("ContractsController", () => {
       // Note: Controller validates trimmed query, but passes original to service
       expect(service.searchByDescription).toHaveBeenCalledWith(
         query,
-        10,
+        50,
         undefined,
         undefined,
       );
@@ -1700,7 +1721,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         "service",
         undefined,
       );
@@ -1727,7 +1748,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         undefined,
         "backend",
       );
@@ -1754,7 +1775,7 @@ describe("ContractsController", () => {
       expect(result).toEqual(mockFilteredResults);
       expect(service.searchByDescription).toHaveBeenCalledWith(
         "user authentication",
-        10,
+        50,
         "service",
         "backend",
       );

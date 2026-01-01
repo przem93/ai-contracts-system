@@ -180,7 +180,7 @@ export class ContractsController {
   @ApiOperation({
     summary: "Search and filter modules",
     description:
-      "Search for modules using semantic similarity (when query is provided) and/or filter by type and category. At least one parameter (query, type, or category) must be provided.",
+      "Search for modules using semantic similarity (when query is provided) and/or filter by type and category. If no parameters are provided, returns all modules from Neo4j.",
   })
   @ApiQuery({
     name: "query",
@@ -190,8 +190,8 @@ export class ContractsController {
   })
   @ApiQuery({
     name: "limit",
-    description: "Maximum number of results to return (default: 10)",
-    example: 10,
+    description: "Maximum number of results to return (default: 50)",
+    example: 50,
     required: false,
   })
   @ApiQuery({
@@ -212,10 +212,6 @@ export class ContractsController {
     type: SearchByDescriptionResponseDto,
   })
   @ApiResponse({
-    status: 400,
-    description: "At least one parameter (query, type, or category) must be provided",
-  })
-  @ApiResponse({
     status: 500,
     description:
       "Failed to perform search (embedding service not ready or Neo4j error)",
@@ -226,19 +222,10 @@ export class ContractsController {
     @Query("type") type?: string,
     @Query("category") category?: string,
   ): Promise<SearchByDescriptionResponseDto> {
-    // Validate that at least one parameter is provided
     const hasQuery = query && query.trim().length > 0;
-    const hasType = type && type.trim().length > 0;
-    const hasCategory = category && category.trim().length > 0;
-
-    if (!hasQuery && !hasType && !hasCategory) {
-      throw new BadRequestException(
-        "At least one parameter (query, type, or category) must be provided",
-      );
-    }
 
     // Parse and validate limit parameter
-    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    const parsedLimit = limit ? parseInt(limit, 10) : 50;
     if (isNaN(parsedLimit) || parsedLimit < 1) {
       throw new BadRequestException("Limit must be a positive integer");
     }

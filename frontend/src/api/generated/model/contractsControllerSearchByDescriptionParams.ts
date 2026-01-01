@@ -8,11 +8,19 @@
 
 export type ContractsControllerSearchByDescriptionParams = {
 /**
- * The search query text to find similar modules
+ * The search query text to find similar modules using semantic similarity
  */
-query: string;
+query?: string;
 /**
  * Maximum number of results to return (default: 10)
  */
 limit?: string;
+/**
+ * Filter results by contract type (e.g., 'controller', 'service')
+ */
+type?: string;
+/**
+ * Filter results by contract category (e.g., 'api', 'backend')
+ */
+category?: string;
 };

@@ -918,24 +918,29 @@ export class ContractsService implements OnModuleInit {
   }
 
   /**
-   * Get all unique contract types from the current contracts
+   * Get all unique contract types from Neo4j database
    * @returns Object with array of unique contract types and their count
    */
   async getContractTypes(): Promise<{ types: string[]; count: number }> {
+    const session = this.neo4jService.getSession();
+
     try {
-      // Get all contracts
-      const contracts = await this.getAllContracts();
+      this.logger.log("Fetching all unique contract types from Neo4j");
 
-      // Extract unique types
-      const typesSet = new Set<string>();
-      contracts.forEach((contract) => {
-        if (contract.content.type) {
-          typesSet.add(contract.content.type);
-        }
-      });
+      // Query Neo4j to get all unique types
+      const result = await session.run(
+        `
+        MATCH (m:Module)
+        WHERE m.type IS NOT NULL
+        RETURN DISTINCT m.type AS type
+        ORDER BY type ASC
+        `,
+      );
 
-      // Convert to sorted array
-      const types = Array.from(typesSet).sort();
+      // Extract types from the result
+      const types: string[] = result.records.map((record) =>
+        record.get("type"),
+      );
 
       this.logger.log(`Found ${types.length} unique contract types: ${types.join(", ")}`);
 
@@ -946,6 +951,8 @@ export class ContractsService implements OnModuleInit {
     } catch (error) {
       this.logger.error("Error getting contract types:", error.message);
       throw new Error(`Failed to get contract types: ${error.message}`);
+    } finally {
+      await session.close();
     }
   }
 
@@ -1003,6 +1010,7 @@ export class ContractsService implements OnModuleInit {
         const whereClause = whereConditions.join(" AND ");
 
         // Perform vector similarity search in Neo4j
+        // Retrieve all module data and parts from Neo4j
         const result = await session.run(
           `
           MATCH (m:Module)
@@ -1012,7 +1020,17 @@ export class ContractsService implements OnModuleInit {
                  dot + m.embedding[i] * $queryEmbedding[i]
                ) AS similarity
           WHERE similarity > 0
+          OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
+          WITH m, similarity, collect({id: p.part_id, type: p.type}) AS parts
+          OPTIONAL MATCH (m)-[dep:MODULE_DEPENDENCY]->(depModule:Module)
+          WITH m, similarity, parts, collect({module_id: depModule.module_id, parts: dep.parts}) AS dependencies
           RETURN m.module_id AS module_id,
+                 m.type AS type,
+                 m.description AS description,
+                 m.category AS category,
+                 m.contractFileHash AS fileHash,
+                 parts,
+                 dependencies,
                  similarity
           ORDER BY similarity DESC
           LIMIT $limit
@@ -1020,40 +1038,54 @@ export class ContractsService implements OnModuleInit {
           parameters,
         );
 
-        // Extract module IDs and similarity scores from Neo4j results
-        const searchResults = result.records.map((record) => ({
-          module_id: record.get("module_id"),
-          similarity: record.get("similarity"),
-        }));
+        // Map Neo4j results to ModuleSearchResultDto
+        const results: ModuleSearchResultDto[] = result.records.map((record) => {
+          const moduleId = record.get("module_id");
+          const moduleType = record.get("type");
+          const description = record.get("description");
+          const moduleCategory = record.get("category");
+          const fileHash = record.get("fileHash");
+          const parts = record.get("parts");
+          const dependencies = record.get("dependencies");
+          const similarity = record.get("similarity");
 
-        // Get all contract files to fetch full contract information
-        const allContracts = await this.getAllContracts();
+          // Filter out null values from parts (when OPTIONAL MATCH has no results)
+          const filteredParts = parts.filter((p: any) => p.id !== null && p.type !== null);
 
-        // Create a map of module_id to contract file for efficient lookup
-        const contractsMap = new Map<string, ContractFileDto>();
-        allContracts.forEach((contract) => {
-          contractsMap.set(contract.content.id, contract);
+          // Filter out null values from dependencies and parse parts JSON
+          const filteredDependencies = dependencies
+            .filter((dep: any) => dep.module_id !== null)
+            .map((dep: any) => ({
+              module_id: dep.module_id,
+              parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
+            }));
+
+          // Build contract content from Neo4j data
+          const contractContent: Contract = {
+            id: moduleId,
+            type: moduleType,
+            description: description,
+            category: moduleCategory,
+          };
+
+          // Add parts if they exist
+          if (filteredParts.length > 0) {
+            contractContent.parts = filteredParts;
+          }
+
+          // Add dependencies if they exist
+          if (filteredDependencies.length > 0) {
+            contractContent.dependencies = filteredDependencies;
+          }
+
+          return {
+            fileName: `${moduleId}.yml`, // Generate filename from module_id
+            filePath: `/contracts/${moduleId}.yml`, // Generate file path
+            content: contractContent,
+            fileHash: fileHash || "",
+            similarity: similarity,
+          };
         });
-
-        // Map search results to include full contract information
-        const results: ModuleSearchResultDto[] = searchResults
-          .map((searchResult) => {
-            const contract = contractsMap.get(searchResult.module_id);
-            if (!contract) {
-              this.logger.warn(
-                `Module "${searchResult.module_id}" found in Neo4j but contract file not found`,
-              );
-              return null;
-            }
-            return {
-              fileName: contract.fileName,
-              filePath: contract.filePath,
-              content: contract.content,
-              fileHash: contract.fileHash,
-              similarity: searchResult.similarity,
-            };
-          })
-          .filter((result): result is ModuleSearchResultDto => result !== null);
 
         const filterInfo = [];
         if (type) filterInfo.push(`type: ${type}`);
@@ -1089,48 +1121,75 @@ export class ContractsService implements OnModuleInit {
         const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
 
         // Simple filter query without similarity
+        // Retrieve all module data and parts from Neo4j
         const result = await session.run(
           `
           MATCH (m:Module)
           ${whereClause}
-          RETURN m.module_id AS module_id
+          OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
+          WITH m, collect({id: p.part_id, type: p.type}) AS parts
+          OPTIONAL MATCH (m)-[dep:MODULE_DEPENDENCY]->(depModule:Module)
+          WITH m, parts, collect({module_id: depModule.module_id, parts: dep.parts}) AS dependencies
+          RETURN m.module_id AS module_id,
+                 m.type AS type,
+                 m.description AS description,
+                 m.category AS category,
+                 m.contractFileHash AS fileHash,
+                 parts,
+                 dependencies
           ORDER BY m.module_id ASC
           LIMIT $limit
           `,
           parameters,
         );
 
-        // Extract module IDs from Neo4j results
-        const moduleIds = result.records.map((record) => record.get("module_id"));
+        // Map Neo4j results to ModuleSearchResultDto
+        const results: ModuleSearchResultDto[] = result.records.map((record) => {
+          const moduleId = record.get("module_id");
+          const moduleType = record.get("type");
+          const description = record.get("description");
+          const moduleCategory = record.get("category");
+          const fileHash = record.get("fileHash");
+          const parts = record.get("parts");
+          const dependencies = record.get("dependencies");
 
-        // Get all contract files to fetch full contract information
-        const allContracts = await this.getAllContracts();
+          // Filter out null values from parts (when OPTIONAL MATCH has no results)
+          const filteredParts = parts.filter((p: any) => p.id !== null && p.type !== null);
 
-        // Create a map of module_id to contract file for efficient lookup
-        const contractsMap = new Map<string, ContractFileDto>();
-        allContracts.forEach((contract) => {
-          contractsMap.set(contract.content.id, contract);
+          // Filter out null values from dependencies and parse parts JSON
+          const filteredDependencies = dependencies
+            .filter((dep: any) => dep.module_id !== null)
+            .map((dep: any) => ({
+              module_id: dep.module_id,
+              parts: typeof dep.parts === "string" ? JSON.parse(dep.parts) : dep.parts,
+            }));
+
+          // Build contract content from Neo4j data
+          const contractContent: Contract = {
+            id: moduleId,
+            type: moduleType,
+            description: description,
+            category: moduleCategory,
+          };
+
+          // Add parts if they exist
+          if (filteredParts.length > 0) {
+            contractContent.parts = filteredParts;
+          }
+
+          // Add dependencies if they exist
+          if (filteredDependencies.length > 0) {
+            contractContent.dependencies = filteredDependencies;
+          }
+
+          return {
+            fileName: `${moduleId}.yml`, // Generate filename from module_id
+            filePath: `/contracts/${moduleId}.yml`, // Generate file path
+            content: contractContent,
+            fileHash: fileHash || "",
+            similarity: 1.0, // Default similarity when not using semantic search
+          };
         });
-
-        // Map results to include full contract information (no similarity score)
-        const results: ModuleSearchResultDto[] = moduleIds
-          .map((moduleId) => {
-            const contract = contractsMap.get(moduleId);
-            if (!contract) {
-              this.logger.warn(
-                `Module "${moduleId}" found in Neo4j but contract file not found`,
-              );
-              return null;
-            }
-            return {
-              fileName: contract.fileName,
-              filePath: contract.filePath,
-              content: contract.content,
-              fileHash: contract.fileHash,
-              similarity: 1.0, // Default similarity when not using semantic search
-            };
-          })
-          .filter((result): result is ModuleSearchResultDto => result !== null);
 
         const filterInfo = [];
         if (type) filterInfo.push(`type: ${type}`);
