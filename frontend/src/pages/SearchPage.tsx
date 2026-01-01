@@ -28,10 +28,8 @@ function SearchPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
 
-  // Check if any filter is active (search query, category, or type)
+  // Check if search query is active
   const hasSearchQuery = searchQuery.trim().length > 0;
-  const hasFilters = selectedCategory !== 'all' || selectedType !== 'all';
-  const shouldFetchData = hasSearchQuery || hasFilters;
 
   // Fetch contract types from API
   const { data: typesData, isLoading: isLoadingTypes, isError: isErrorTypes } = useContractsControllerGetContractTypes();
@@ -39,7 +37,8 @@ function SearchPage() {
   // Fetch contract categories from API
   const { data: categoriesData, isLoading: isLoadingCategories, isError: isErrorCategories } = useContractsControllerGetCategories();
 
-  // Search contracts using the search API with query and/or filters
+  // Always use search API to fetch contracts from Neo4j
+  // This includes: all contracts, filtered contracts, or searched contracts
   const { 
     data: searchData, 
     isLoading: isLoadingSearch, 
@@ -53,7 +52,7 @@ function SearchPage() {
     },
     { 
       query: { 
-        enabled: shouldFetchData,
+        // Always enabled - returns all contracts when no filters
         // Include all params in query key to trigger refetch when they change
         queryKey: [
           'http://localhost/api/contracts/search',
@@ -257,24 +256,24 @@ function SearchPage() {
               Failed to load contract types. Using default options.
             </Alert>
           )}
-          {isError && shouldFetchData && (
+          {isError && (
             <Alert severity="error">
               Failed to {hasSearchQuery ? 'search' : 'load'} contracts. Please try again later.
             </Alert>
           )}
 
           {/* Search Results */}
-          {!shouldFetchData ? (
-            <Alert severity="info">
-              Select a category or type, or search by description
-            </Alert>
-          ) : isLoading ? (
+          {isLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
               <CircularProgress />
             </Box>
           ) : filteredContracts.length === 0 ? (
             <Alert severity="warning">
-              No contracts found{hasSearchQuery ? ` matching "${searchQuery}"` : ' with selected filters'}
+              {hasSearchQuery 
+                ? `No contracts found matching "${searchQuery}"`
+                : selectedCategory !== 'all' || selectedType !== 'all'
+                ? 'No contracts found with selected filters'
+                : 'No contracts found in the database'}
             </Alert>
           ) : (
             <>

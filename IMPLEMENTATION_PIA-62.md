@@ -229,9 +229,10 @@ The frontend SearchPage was incorrectly calling `useContractsControllerGetAllCon
 
 1. **Removed** `useContractsControllerGetAllContracts` import and usage
 2. **Updated** `useContractsControllerSearchByDescription` to:
-   - Always be used for both search and filter operations
-   - Pass `type` and `category` parameters to the backend
-   - Be enabled whenever filters or search query are present
+   - Always be called (even without filters or query)
+   - Return ALL contracts from Neo4j when no parameters are provided
+   - Pass `type` and `category` parameters to the backend when filters are active
+   - Pass `query` parameter when search is active
 
 **Before:**
 ```typescript
@@ -243,17 +244,27 @@ const allContractsData = useContractsControllerGetAllContracts({
 
 **After:**
 ```typescript
-// Always use search endpoint (queries Neo4j)
+// Always use search endpoint (queries Neo4j) - even with no parameters
 const searchData = useContractsControllerSearchByDescription({
   query: hasSearchQuery ? searchQuery : undefined,
   type: selectedType !== 'all' ? selectedType : undefined,
   category: selectedCategory !== 'all' ? selectedCategory : undefined
 }, {
-  query: { enabled: shouldFetchData }
+  query: { 
+    // Always enabled - shows all contracts when no filters
+  }
 });
 ```
 
-Now the frontend consistently uses the Neo4j-based search endpoint for all operations.
+### Backend Update
+
+**Updated `/workspace/backend/src/contracts/contracts.controller.ts`:**
+
+1. **Removed** requirement for at least one parameter
+2. **Updated** API documentation to clarify that endpoint returns all modules when no parameters provided
+3. **Changed** default limit from 10 to 50 to better handle "show all" use case
+
+Now the search endpoint can be called without any parameters and will return all contracts from Neo4j.
 
 ## Files Modified
 
