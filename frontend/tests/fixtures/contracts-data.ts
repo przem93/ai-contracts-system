@@ -338,6 +338,25 @@ export const mockSearchResults = {
     ],
   },
 
+  byCategorySearch: {
+    query: 'user',
+    resultsCount: 3,
+    results: [
+      {
+        fileName: 'users-get.yml',
+        filePath: '/contracts/users-get.yml',
+        content: {
+          id: 'users-get',
+          type: 'controller',
+          category: 'api',
+          description: 'Users get endpoint - retrieves user information from the database',
+        },
+        fileHash: 'a3d2f1e8b9c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1',
+        similarity: 0.95,
+      },
+    ],
+  },
+
   // Search results for "database"
   databaseSearch: {
     query: 'database',
