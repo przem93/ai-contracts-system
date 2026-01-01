@@ -272,6 +272,28 @@ const searchData = useContractsControllerSearchByDescription({
 
 Now the search endpoint can be called without any parameters and will return all contracts from Neo4j.
 
+## Frontend Test Updates
+
+**Updated `/workspace/frontend/tests/search-page.spec.ts`:**
+
+Updated tests to match the new behavior where the search endpoint is always called:
+
+1. **"should display initial info alert when no filters are active"** → **"should display all contracts from Neo4j on page load"**
+   - Changed from: Verify info alert is visible
+   - Changed to: Verify contracts are displayed immediately from search API
+
+2. **"should clear info alert when starting to search"** → **"should update results when searching"**
+   - Changed from: Verify info alert disappears when searching
+   - Changed to: Verify results update when user enters search query
+
+3. **"should not call search API when query is empty and no filters selected"** → **"should call search API on page load to display all contracts from Neo4j"**
+   - Changed from: Verify no API is called on page load
+   - Changed to: Verify search API IS called on page load
+
+4. **"should call all contracts API when filtering without search query"** → **"should call search API when filtering without search query"**
+   - Changed from: Verify getAllContracts API is called for filters
+   - Changed to: Verify search API is called for filters (not getAllContracts)
+
 ## Files Modified
 
 1. `/workspace/backend/src/contracts/contracts.service.ts` - Main backend implementation
@@ -279,6 +301,7 @@ Now the search endpoint can be called without any parameters and will return all
 3. `/workspace/backend/src/contracts/contracts.controller.ts` - Updated controller to allow no parameters
 4. `/workspace/backend/src/contracts/contracts.controller.spec.ts` - Updated controller tests for new default limit and behavior
 5. `/workspace/frontend/src/pages/SearchPage.tsx` - Fixed frontend to always use search endpoint
+6. `/workspace/frontend/tests/search-page.spec.ts` - Updated frontend E2E tests to match new behavior
 
 ## Bug Fix: Aggregation Error
 

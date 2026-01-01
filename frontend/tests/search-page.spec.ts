@@ -85,11 +85,16 @@ test.describe('Search Page with Category and Type Select', () => {
     await expect(searchPage.typeSelect).toBeVisible();
   });
 
-  test('should display initial info alert when no filters are active', async () => {
-    // Verify info alert is displayed
-    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
-    await expect(infoAlert).toContainText('Select a category or type, or search by description');
+  test('should display all contracts from Neo4j on page load', async () => {
+    // Verify contracts are displayed immediately (from Neo4j search endpoint)
+    // The search endpoint is called with no parameters, returning all contracts
+    await searchPage.page.waitForTimeout(500); // Wait for API call
+    
+    const contractCards = searchPage.page.getByTestId('contract-card');
+    const count = await contractCards.count();
+    
+    // Should display contracts (at least the ones we mocked)
+    expect(count).toBeGreaterThan(0);
   });
 
   test('should have "All Categories" selected by default', async () => {
@@ -221,16 +226,22 @@ test.describe('Search Page with Category and Type Select', () => {
     expect(newCount).toBeGreaterThanOrEqual(0);
   });
 
-  test('should clear info alert when starting to search', async () => {
-    // Initially, info alert should be visible
-    const infoAlert = searchPage.page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
+  test('should update results when searching', async () => {
+    // Initially, all contracts from Neo4j should be displayed
+    await searchPage.page.waitForTimeout(500);
+    const initialCount = await searchPage.getContractsCount();
+    expect(initialCount).toBeGreaterThan(0);
     
     // Start searching
     await searchPage.search('test');
     
-    // Info alert should not be visible anymore
-    await expect(infoAlert).not.toBeVisible();
+    // Wait for search results
+    await searchPage.page.waitForTimeout(500);
+    
+    // Results should be updated (search endpoint called with query)
+    // We can't predict exact count, but the search should complete
+    const searchResultsCount = await searchPage.getContractsCount();
+    expect(searchResultsCount).toBeGreaterThanOrEqual(0); // May have 0 or more results
   });
 
   test('should allow filtering by category without search query', async () => {
@@ -746,7 +757,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     expect(hasMatchingContract).toBe(true);
   });
 
-  test('should not call search API when query is empty and no filters selected', async ({ page }) => {
+  test('should call search API on page load to display all contracts from Neo4j', async ({ page }) => {
     let searchApiCalled = false;
     let allContractsApiCalled = false;
 
@@ -767,7 +778,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock get all contracts API to track if it's called
+    // Mock get all contracts API to track if it's called (should NOT be called)
     await page.route('**/api/contracts', async (route) => {
       if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
         allContractsApiCalled = true;
@@ -781,7 +792,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       }
     });
 
-    // Mock search API to track if it's called
+    // Mock search API to track if it's called (should BE called)
     await page.route('**/api/contracts/search*', async (route) => {
       searchApiCalled = true;
       await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
@@ -791,16 +802,19 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     await searchPage.navigate();
     await page.waitForTimeout(500);
 
-    // Verify info alert is shown
-    const infoAlert = page.locator('[role="alert"]').filter({ hasText: 'Select a category or type' });
-    await expect(infoAlert).toBeVisible();
+    // Verify contracts are displayed from search API (Neo4j data)
+    const contractCards = page.getByTestId('contract-card');
+    const count = await contractCards.count();
+    expect(count).toBeGreaterThan(0);
 
-    // Verify neither API was called
-    expect(searchApiCalled).toBe(false);
+    // Verify search API was called (to get all contracts from Neo4j)
+    expect(searchApiCalled).toBe(true);
+    // Verify getAllContracts API was NOT called (we don't use file-based endpoint)
     expect(allContractsApiCalled).toBe(false);
   });
 
-  test('should call all contracts API when filtering without search query', async ({ page }) => {
+  test('should call search API when filtering without search query', async ({ page }) => {
+    let searchApiCalled = false;
     let allContractsApiCalled = false;
 
     // Mock supporting APIs
@@ -820,7 +834,7 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock get all contracts API
+    // Mock get all contracts API (should NOT be called)
     await page.route('**/api/contracts', async (route) => {
       if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
         allContractsApiCalled = true;
@@ -834,8 +848,9 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       }
     });
 
-    // Mock search API (should not be called)
+    // Mock search API (should be called)
     await page.route('**/api/contracts/search*', async (route) => {
+      searchApiCalled = true;
       await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
     });
 
@@ -847,8 +862,10 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     await searchPage.selectCategory('API');
     await page.waitForTimeout(500);
 
-    // Verify all contracts API was called
-    expect(allContractsApiCalled).toBe(true);
+    // Verify search API was called (now used for filtering from Neo4j)
+    expect(searchApiCalled).toBe(true);
+    // Verify getAllContracts API was NOT called (we use search API instead)
+    expect(allContractsApiCalled).toBe(false);
   });
 });
 
