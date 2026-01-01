@@ -5,6 +5,7 @@ import ContractsListPage from './pages/ContractsListPage';
 import ValidationPage from './pages/ValidationPage';
 import ApplyChangesPage from './pages/ApplyChangesPage';
 import SearchPage from './pages/SearchPage';
+import ContractDetailPage from './pages/ContractDetailPage';
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
         <Routes>
           <Route path="/" element={<ContractsListPage />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/contracts/:id" element={<ContractDetailPage />} />
           <Route path="/validation" element={<ValidationPage />} />
           <Route path="/apply" element={<ApplyChangesPage />} />
         </Routes>

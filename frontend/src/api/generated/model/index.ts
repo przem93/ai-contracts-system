@@ -17,6 +17,8 @@ export * from './dependencyPartDto';
 export * from './incomingDependencyDto';
 export * from './modifiedContractDto';
 export * from './modifiedContractDtoStatus';
+export * from './moduleDetailResponseDto';
+export * from './modulePartDto';
 export * from './moduleRelationsResponseDto';
 export * from './moduleSearchResultDto';
 export * from './moduleSearchResultDtoContent';

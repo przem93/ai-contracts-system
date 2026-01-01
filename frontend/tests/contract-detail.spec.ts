@@ -1,0 +1,424 @@
+import { test, expect } from '@playwright/test';
+import { SearchPage } from './pages/SearchPage';
+import { ContractDetailPage } from './pages/ContractDetailPage';
+import { mockSearchResults, mockSearchApiResponses } from './fixtures/contracts-data';
+
+test.describe('Contract Detail Page', () => {
+  let searchPage: SearchPage;
+  let detailPage: ContractDetailPage;
+
+  test.beforeEach(async ({ page }) => {
+    // Mock the types API
+    await page.route('**/api/contracts/types', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          types: ['controller', 'service', 'component'],
+          count: 3
+        })
+      });
+    });
+
+    // Mock the categories API
+    await page.route('**/api/contracts/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          categories: ['api', 'service', 'frontend', 'component']
+        })
+      });
+    });
+
+    // Mock the search API endpoint
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+    });
+
+    // Mock the get module detail API endpoint
+    await page.route('**/api/contracts/users-get', async (route) => {
+      // Only match exact path without /relations
+      if (!route.request().url().includes('/relations')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'users-get',
+            type: 'controller',
+            category: 'api',
+            description: 'Users get endpoint',
+            parts: [
+              { id: 'getUserById', type: 'function' },
+              { id: 'getAllUsers', type: 'function' }
+            ]
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.route('**/api/contracts/users-permissions', async (route) => {
+      // Only match exact path without /relations
+      if (!route.request().url().includes('/relations')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'users-permissions',
+            type: 'service',
+            category: 'service',
+            description: 'Users permissions service',
+            parts: [
+              { id: 'id', type: 'string' },
+              { id: 'name', type: 'string' },
+              { id: 'checkPermission', type: 'function' }
+            ]
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock 404 for nonexistent contracts
+    await page.route('**/api/contracts/nonexistent-contract*', async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Module not found' })
+      });
+    });
+
+    // Mock the module relations API endpoint
+    await page.route('**/api/contracts/*/relations', async (route) => {
+      const url = route.request().url();
+      
+      if (url.includes('users-get')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            module_id: 'users-get',
+            outgoing_dependencies: [
+              {
+                module_id: 'users-permissions',
+                parts: [
+                  { part_id: 'id', type: 'string' },
+                  { part_id: 'name', type: 'string' }
+                ]
+              }
+            ],
+            incoming_dependencies: []
+          })
+        });
+      } else if (url.includes('users-permissions')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            module_id: 'users-permissions',
+            outgoing_dependencies: [],
+            incoming_dependencies: [
+              {
+                module_id: 'users-get',
+                parts: [
+                  { part_id: 'id', type: 'string' },
+                  { part_id: 'name', type: 'string' }
+                ]
+              }
+            ]
+          })
+        });
+      } else {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ message: 'Module not found' })
+        });
+      }
+    });
+
+    searchPage = new SearchPage(page);
+    detailPage = new ContractDetailPage(page);
+  });
+
+  test('should navigate to contract detail page when clicking on a contract from search results', async ({ page }) => {
+    // Navigate to search page
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Search for contracts
+    await searchPage.search('user');
+    await page.waitForTimeout(500);
+
+    // Click on the first contract card
+    const firstContract = searchPage.contractCards.first();
+    await firstContract.click();
+
+    // Wait for navigation
+    await page.waitForTimeout(500);
+
+    // Verify we're on the detail page
+    await expect(page).toHaveURL(/\/contracts\/.+/);
+    await expect(detailPage.pageTitle).toBeVisible();
+  });
+
+  test('should display contract basic information correctly', async ({ page }) => {
+    // Navigate directly to detail page
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Verify title
+    const title = await detailPage.getContractTitle();
+    expect(title).toBe('users-get');
+
+    // Verify category and type chips are visible
+    await expect(detailPage.categoryChip).toBeVisible();
+    await expect(detailPage.typeChip).toBeVisible();
+
+    // Verify description is visible
+    await expect(detailPage.description).toBeVisible();
+  });
+
+  test('should display contract parts section', async ({ page }) => {
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Verify parts section is visible
+    await expect(detailPage.partsSection).toBeVisible();
+
+    // Verify parts table has correct number of rows
+    const partsCount = await detailPage.getPartsCount();
+    expect(partsCount).toBe(2); // getUserById and getAllUsers
+  });
+
+  test('should display outgoing dependencies section', async ({ page }) => {
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Verify outgoing dependencies section is visible
+    await expect(detailPage.outgoingDependenciesSection).toBeVisible();
+
+    // Verify there is at least one outgoing dependency
+    const outgoingCount = await detailPage.getOutgoingDependenciesCount();
+    expect(outgoingCount).toBeGreaterThan(0);
+  });
+
+  test('should display incoming dependencies section', async ({ page }) => {
+    await detailPage.navigate('users-permissions');
+    await page.waitForTimeout(500);
+
+    // Verify incoming dependencies section is visible
+    await expect(detailPage.incomingDependenciesSection).toBeVisible();
+
+    // Verify there is at least one incoming dependency
+    const incomingCount = await detailPage.getIncomingDependenciesCount();
+    expect(incomingCount).toBeGreaterThan(0);
+  });
+
+  test('should navigate back to search page when clicking back button', async ({ page }) => {
+    // Navigate to search page first
+    await searchPage.navigate();
+    await page.waitForTimeout(500);
+
+    // Search and click on a contract
+    await searchPage.search('user');
+    await page.waitForTimeout(500);
+    
+    const firstContract = searchPage.contractCards.first();
+    await firstContract.click();
+    await page.waitForTimeout(500);
+
+    // Click back button
+    await detailPage.clickBack();
+    await page.waitForTimeout(500);
+
+    // Verify we're back on the search page
+    await expect(page).toHaveURL(/\/search/);
+    await expect(searchPage.pageTitle).toBeVisible();
+  });
+
+  test('should show error when contract is not found', async ({ page }) => {
+    await detailPage.navigate('nonexistent-contract');
+    
+    // Wait for error alert to appear
+    await expect(detailPage.errorAlert).toBeVisible({ timeout: 5000 });
+
+    // Verify error alert is displayed
+    const hasError = await detailPage.hasError();
+    expect(hasError).toBe(true);
+
+    // Verify back button is still visible
+    await expect(detailPage.backButton).toBeVisible();
+  });
+
+  test('should display loading state while fetching data', async ({ page }) => {
+    // Mock the module detail API with delay
+    await page.route('**/api/contracts/users-get', async (route) => {
+      if (!route.request().url().includes('/relations')) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'users-get',
+            type: 'controller',
+            category: 'api',
+            description: 'Users get endpoint',
+            parts: []
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock the relations API with delay
+    await page.route('**/api/contracts/users-get/relations', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          module_id: 'users-get',
+          outgoing_dependencies: [],
+          incoming_dependencies: []
+        })
+      });
+    });
+
+    await detailPage.navigate('users-get');
+
+    // Verify loading spinner appears
+    const loadingSpinner = page.locator('[role="progressbar"]');
+    await expect(loadingSpinner).toBeVisible();
+
+    // Wait for data to load
+    await page.waitForTimeout(1200);
+
+    // Verify loading spinner disappears
+    await expect(loadingSpinner).not.toBeVisible();
+  });
+
+  test('should display empty state for modules with no parts', async ({ page }) => {
+    // Mock module detail with no parts
+    await page.route('**/api/contracts/simple-module', async (route) => {
+      if (!route.request().url().includes('/relations')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'simple-module',
+            type: 'component',
+            category: 'frontend',
+            description: 'A simple module with no parts',
+            parts: []
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.route('**/api/contracts/simple-module/relations', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          module_id: 'simple-module',
+          outgoing_dependencies: [],
+          incoming_dependencies: []
+        })
+      });
+    });
+
+    await detailPage.navigate('simple-module');
+    await page.waitForTimeout(500);
+
+    // Verify parts section is not visible (since there are no parts)
+    const partsCount = await detailPage.getPartsCount();
+    expect(partsCount).toBe(0);
+  });
+
+  test('should display empty state for modules with no dependencies', async ({ page }) => {
+    await detailPage.navigate('users-permissions');
+    await page.waitForTimeout(500);
+
+    // Verify outgoing dependencies section shows "no dependencies" message
+    const outgoingSection = page.locator('h5:has-text("Outgoing Dependencies")').locator('..');
+    const noOutgoingMsg = outgoingSection.getByText(/This module has no outgoing dependencies/i);
+    await expect(noOutgoingMsg).toBeVisible();
+  });
+
+  test('should make outgoing dependencies clickable', async ({ page }) => {
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Find the outgoing dependency link
+    const dependencyLink = page.locator('a[href="/contracts/users-permissions"]').first();
+    await expect(dependencyLink).toBeVisible();
+    
+    // Verify the link text is the module ID
+    await expect(dependencyLink).toHaveText('users-permissions');
+    
+    // Click the dependency link
+    await dependencyLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to the dependency's detail page
+    await expect(page).toHaveURL(/\/contracts\/users-permissions/);
+    
+    // Verify we're on the users-permissions detail page
+    const title = await detailPage.getContractTitle();
+    expect(title).toBe('users-permissions');
+  });
+
+  test('should make incoming dependencies clickable', async ({ page }) => {
+    await detailPage.navigate('users-permissions');
+    await page.waitForTimeout(500);
+
+    // Find the incoming dependency link
+    const dependencyLink = page.locator('a[href="/contracts/users-get"]').first();
+    await expect(dependencyLink).toBeVisible();
+    
+    // Verify the link text is the module ID
+    await expect(dependencyLink).toHaveText('users-get');
+    
+    // Click the dependency link
+    await dependencyLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to the dependency's detail page
+    await expect(page).toHaveURL(/\/contracts\/users-get/);
+    
+    // Verify we're on the users-get detail page
+    const title = await detailPage.getContractTitle();
+    expect(title).toBe('users-get');
+  });
+
+  test('should allow navigating between related modules', async ({ page }) => {
+    // Start at users-get
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Click on outgoing dependency to users-permissions
+    const outgoingLink = page.locator('a[href="/contracts/users-permissions"]').first();
+    await outgoingLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify we're on users-permissions
+    let title = await detailPage.getContractTitle();
+    expect(title).toBe('users-permissions');
+
+    // Click on incoming dependency back to users-get
+    const incomingLink = page.locator('a[href="/contracts/users-get"]').first();
+    await incomingLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify we're back on users-get
+    title = await detailPage.getContractTitle();
+    expect(title).toBe('users-get');
+  });
+});

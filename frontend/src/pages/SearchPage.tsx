@@ -16,6 +16,7 @@ import {
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ContractCard from '../components/ContractCard';
 import { 
   useContractsControllerGetContractTypes, 
@@ -24,6 +25,7 @@ import {
 } from '../api/generated/contracts/contracts';
 
 function SearchPage() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
@@ -290,6 +292,8 @@ function SearchPage() {
                     type={contract.type}
                     category={contract.category}
                     description={contract.description}
+                    clickable={true}
+                    onClick={() => navigate(`/contracts/${contract.id}`)}
                   />
                 ))}
               </Stack>
