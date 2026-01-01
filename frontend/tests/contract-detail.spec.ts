@@ -349,4 +349,74 @@ test.describe('Contract Detail Page', () => {
     const noOutgoingMsg = outgoingSection.getByText(/This module has no outgoing dependencies/i);
     await expect(noOutgoingMsg).toBeVisible();
   });
+
+  test('should make outgoing dependencies clickable', async ({ page }) => {
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Find the outgoing dependency link
+    const dependencyLink = page.locator('a[href="/contracts/users-permissions"]').first();
+    await expect(dependencyLink).toBeVisible();
+    
+    // Verify the link text is the module ID
+    await expect(dependencyLink).toHaveText('users-permissions');
+    
+    // Click the dependency link
+    await dependencyLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to the dependency's detail page
+    await expect(page).toHaveURL(/\/contracts\/users-permissions/);
+    
+    // Verify we're on the users-permissions detail page
+    const title = await detailPage.getContractTitle();
+    expect(title).toBe('users-permissions');
+  });
+
+  test('should make incoming dependencies clickable', async ({ page }) => {
+    await detailPage.navigate('users-permissions');
+    await page.waitForTimeout(500);
+
+    // Find the incoming dependency link
+    const dependencyLink = page.locator('a[href="/contracts/users-get"]').first();
+    await expect(dependencyLink).toBeVisible();
+    
+    // Verify the link text is the module ID
+    await expect(dependencyLink).toHaveText('users-get');
+    
+    // Click the dependency link
+    await dependencyLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify navigation to the dependency's detail page
+    await expect(page).toHaveURL(/\/contracts\/users-get/);
+    
+    // Verify we're on the users-get detail page
+    const title = await detailPage.getContractTitle();
+    expect(title).toBe('users-get');
+  });
+
+  test('should allow navigating between related modules', async ({ page }) => {
+    // Start at users-get
+    await detailPage.navigate('users-get');
+    await page.waitForTimeout(500);
+
+    // Click on outgoing dependency to users-permissions
+    const outgoingLink = page.locator('a[href="/contracts/users-permissions"]').first();
+    await outgoingLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify we're on users-permissions
+    let title = await detailPage.getContractTitle();
+    expect(title).toBe('users-permissions');
+
+    // Click on incoming dependency back to users-get
+    const incomingLink = page.locator('a[href="/contracts/users-get"]').first();
+    await incomingLink.click();
+    await page.waitForTimeout(500);
+
+    // Verify we're back on users-get
+    title = await detailPage.getContractTitle();
+    expect(title).toBe('users-get');
+  });
 });

@@ -18,7 +18,7 @@ import {
   TableRow
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useContractsControllerGetModuleRelations, useContractsControllerGetModuleDetail } from '../api/generated/contracts/contracts';
 
 function ContractDetailPage() {
@@ -158,7 +158,20 @@ function ContractDetailPage() {
                 <Stack spacing={2}>
                   {outgoingDependencies.map((dep, index) => (
                     <Paper key={index} variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>
+                      <Typography 
+                        variant="h6" 
+                        gutterBottom
+                        component={Link}
+                        to={`/contracts/${dep.module_id}`}
+                        sx={{ 
+                          textDecoration: 'none',
+                          color: 'primary.main',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                            color: 'primary.dark'
+                          }
+                        }}
+                      >
                         {dep.module_id}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -196,7 +209,20 @@ function ContractDetailPage() {
                 <Stack spacing={2}>
                   {incomingDependencies.map((dep, index) => (
                     <Paper key={index} variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="h6" gutterBottom>
+                      <Typography 
+                        variant="h6" 
+                        gutterBottom
+                        component={Link}
+                        to={`/contracts/${dep.module_id}`}
+                        sx={{ 
+                          textDecoration: 'none',
+                          color: 'primary.main',
+                          '&:hover': {
+                            textDecoration: 'underline',
+                            color: 'primary.dark'
+                          }
+                        }}
+                      >
                         {dep.module_id}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
