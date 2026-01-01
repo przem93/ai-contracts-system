@@ -36,50 +36,59 @@ test.describe('Contract Detail Page', () => {
       await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
     });
 
-    // Mock the get all contracts API endpoint
-    await page.route('**/api/contracts', async (route) => {
-      // Only handle GET requests to /api/contracts (not /api/contracts/*)
-      if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
+    // Mock the get module detail API endpoint
+    await page.route('**/api/contracts/users-get', async (route) => {
+      // Only match exact path without /relations
+      if (!route.request().url().includes('/relations')) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              fileName: 'users-get.yml',
-              filePath: '/contracts/users-get.yml',
-              fileHash: 'abc123',
-              content: {
-                id: 'users-get',
-                type: 'controller',
-                category: 'api',
-                description: 'Users get endpoint',
-                parts: [
-                  { id: 'getUserById', type: 'function' },
-                  { id: 'getAllUsers', type: 'function' }
-                ]
-              }
-            },
-            {
-              fileName: 'users-permissions.yml',
-              filePath: '/contracts/users-permissions.yml',
-              fileHash: 'def456',
-              content: {
-                id: 'users-permissions',
-                type: 'service',
-                category: 'service',
-                description: 'Users permissions service',
-                parts: [
-                  { id: 'id', type: 'string' },
-                  { id: 'name', type: 'string' },
-                  { id: 'checkPermission', type: 'function' }
-                ]
-              }
-            }
-          ])
+          body: JSON.stringify({
+            id: 'users-get',
+            type: 'controller',
+            category: 'api',
+            description: 'Users get endpoint',
+            parts: [
+              { id: 'getUserById', type: 'function' },
+              { id: 'getAllUsers', type: 'function' }
+            ]
+          })
         });
       } else {
         await route.continue();
       }
+    });
+
+    await page.route('**/api/contracts/users-permissions', async (route) => {
+      // Only match exact path without /relations
+      if (!route.request().url().includes('/relations')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'users-permissions',
+            type: 'service',
+            category: 'service',
+            description: 'Users permissions service',
+            parts: [
+              { id: 'id', type: 'string' },
+              { id: 'name', type: 'string' },
+              { id: 'checkPermission', type: 'function' }
+            ]
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock 404 for nonexistent contracts
+    await page.route('**/api/contracts/nonexistent-contract*', async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Module not found' })
+      });
     });
 
     // Mock the module relations API endpoint
@@ -244,7 +253,27 @@ test.describe('Contract Detail Page', () => {
   });
 
   test('should display loading state while fetching data', async ({ page }) => {
-    // Mock the API with delay
+    // Mock the module detail API with delay
+    await page.route('**/api/contracts/users-get', async (route) => {
+      if (!route.request().url().includes('/relations')) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 'users-get',
+            type: 'controller',
+            category: 'api',
+            description: 'Users get endpoint',
+            parts: []
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock the relations API with delay
     await page.route('**/api/contracts/users-get/relations', async (route) => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       await route.fulfill({
@@ -272,26 +301,19 @@ test.describe('Contract Detail Page', () => {
   });
 
   test('should display empty state for modules with no parts', async ({ page }) => {
-    // Mock contract with no parts
-    await page.route('**/api/contracts', async (route) => {
-      if (route.request().url().match(/\/api\/contracts(?:$|\?)/)) {
+    // Mock module detail with no parts
+    await page.route('**/api/contracts/simple-module', async (route) => {
+      if (!route.request().url().includes('/relations')) {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify([
-            {
-              fileName: 'simple-module.yml',
-              filePath: '/contracts/simple-module.yml',
-              fileHash: 'xyz789',
-              content: {
-                id: 'simple-module',
-                type: 'component',
-                category: 'frontend',
-                description: 'A simple module with no parts',
-                parts: []
-              }
-            }
-          ])
+          body: JSON.stringify({
+            id: 'simple-module',
+            type: 'component',
+            category: 'frontend',
+            description: 'A simple module with no parts',
+            parts: []
+          })
         });
       } else {
         await route.continue();

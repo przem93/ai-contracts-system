@@ -25,6 +25,7 @@ import {
   ModuleSearchResultDto,
 } from "./dto/search-by-description-response.dto";
 import { CategoriesResponseDto } from "./dto/categories-response.dto";
+import { ModuleDetailResponseDto } from "./dto/module-detail-response.dto";
 
 @Injectable()
 export class ContractsService implements OnModuleInit {
@@ -820,6 +821,60 @@ export class ContractsService implements OnModuleInit {
       throw new Error(
         `Failed to check contract modifications: ${error.message}`,
       );
+    } finally {
+      await session.close();
+    }
+  }
+
+  /**
+   * Get details for a specific module from Neo4j
+   * @param moduleId The module ID to get details for
+   * @returns Module details including id, type, description, category, and parts
+   */
+  async getModuleDetail(
+    moduleId: string,
+  ): Promise<ModuleDetailResponseDto> {
+    const session = this.neo4jService.getSession();
+
+    try {
+      // Query module details and parts
+      const result = await session.run(
+        `
+        MATCH (m:Module {module_id: $moduleId})
+        OPTIONAL MATCH (m)-[:MODULE_PART]->(p:Part)
+        RETURN m.module_id AS id,
+               m.type AS type,
+               m.description AS description,
+               m.category AS category,
+               COLLECT({id: p.part_id, type: p.type}) AS parts
+        `,
+        { moduleId },
+      );
+
+      if (result.records.length === 0) {
+        throw new Error(`Module with id "${moduleId}" not found`);
+      }
+
+      const record = result.records[0];
+      const parts = record.get("parts").filter((p: any) => p.id !== null);
+
+      this.logger.log(
+        `Retrieved details for module "${moduleId}" with ${parts.length} parts`,
+      );
+
+      return {
+        id: record.get("id"),
+        type: record.get("type"),
+        description: record.get("description"),
+        category: record.get("category"),
+        parts,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Error getting module details for "${moduleId}":`,
+        error.message,
+      );
+      throw error;
     } finally {
       await session.close();
     }

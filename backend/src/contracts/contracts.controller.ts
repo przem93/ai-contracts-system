@@ -24,6 +24,7 @@ import { ModuleRelationsResponseDto } from "./dto/module-relations-response.dto"
 import { SearchByDescriptionResponseDto } from "./dto/search-by-description-response.dto";
 import { ContractTypesResponseDto } from "./dto/contract-types-response.dto";
 import { CategoriesResponseDto } from "./dto/categories-response.dto";
+import { ModuleDetailResponseDto } from "./dto/module-detail-response.dto";
 
 @ApiTags("contracts")
 @Controller("contracts")
@@ -141,6 +142,39 @@ export class ContractsController {
 
     // Step 6: Return success result
     return applyResult;
+  }
+
+  @Get(":module_id")
+  @ApiOperation({
+    summary: "Get details for a specific module",
+    description:
+      "Returns module details from Neo4j including id, type, category, description, and parts",
+  })
+  @ApiParam({
+    name: "module_id",
+    description: "The module ID to get details for",
+    example: "users-service",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns module details",
+    type: ModuleDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Module not found",
+  })
+  async getModuleDetail(
+    @Param("module_id") moduleId: string,
+  ): Promise<ModuleDetailResponseDto> {
+    try {
+      return await this.contractsService.getModuleDetail(moduleId);
+    } catch (error) {
+      if (error.message.includes("not found")) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
+    }
   }
 
   @Get(":module_id/relations")

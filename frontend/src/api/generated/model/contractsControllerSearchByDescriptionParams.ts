@@ -12,7 +12,7 @@ export type ContractsControllerSearchByDescriptionParams = {
  */
 query?: string;
 /**
- * Maximum number of results to return (default: 10)
+ * Maximum number of results to return (default: 50)
  */
 limit?: string;
 /**

@@ -8,7 +8,6 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  Divider,
   Button,
   Paper,
   Table,
@@ -20,11 +19,18 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useContractsControllerGetModuleRelations, useContractsControllerGetAllContracts } from '../api/generated/contracts/contracts';
+import { useContractsControllerGetModuleRelations, useContractsControllerGetModuleDetail } from '../api/generated/contracts/contracts';
 
 function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  // Fetch module details from Neo4j
+  const { 
+    data: moduleData, 
+    isLoading: isLoadingModule, 
+    isError: isErrorModule 
+  } = useContractsControllerGetModuleDetail(id || '');
 
   // Fetch module relations (dependencies) from Neo4j
   const { 
@@ -33,21 +39,8 @@ function ContractDetailPage() {
     isError: isErrorRelations 
   } = useContractsControllerGetModuleRelations(id || '');
 
-  // Fetch all contracts to get the contract basic info
-  const { 
-    data: contractsData, 
-    isLoading: isLoadingContracts, 
-    isError: isErrorContracts 
-  } = useContractsControllerGetAllContracts();
-
-  // Find the current contract from all contracts
-  const contract = contractsData?.find((c) => {
-    const content = c.content as any;
-    return content.id === id;
-  });
-
-  const isLoading = isLoadingRelations || isLoadingContracts;
-  const isError = isErrorRelations || isErrorContracts;
+  const isLoading = isLoadingRelations || isLoadingModule;
+  const isError = isErrorRelations || isErrorModule;
 
   if (isLoading) {
     return (
@@ -59,7 +52,7 @@ function ContractDetailPage() {
     );
   }
 
-  if (isError || !contract) {
+  if (isError || !moduleData) {
     return (
       <Container maxWidth="lg">
         <Box sx={{ py: 4 }}>
@@ -71,15 +64,14 @@ function ContractDetailPage() {
             Back
           </Button>
           <Alert severity="error">
-            {isError ? 'Failed to load contract details. Please try again later.' : 'Contract not found.'}
+            {isError ? 'Failed to load module details. Please try again later.' : 'Module not found.'}
           </Alert>
         </Box>
       </Container>
     );
   }
 
-  const content = contract.content as any;
-  const parts = content.parts || [];
+  const parts = moduleData.parts || [];
   const outgoingDependencies = relationsData?.outgoing_dependencies || [];
   const incomingDependencies = relationsData?.incoming_dependencies || [];
 
@@ -102,28 +94,17 @@ function ContractDetailPage() {
               <Stack spacing={2}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
                   <Typography variant="h4" component="h1">
-                    {content.id}
+                    {moduleData.id}
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Chip label={content.category} color="primary" />
-                    <Chip label={content.type} variant="outlined" />
+                    <Chip label={moduleData.category} color="primary" />
+                    <Chip label={moduleData.type} variant="outlined" />
                   </Box>
                 </Box>
                 
                 <Typography variant="body1" color="text.secondary">
-                  {content.description}
+                  {moduleData.description}
                 </Typography>
-
-                <Divider />
-
-                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>File:</strong> {contract.fileName}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    <strong>Path:</strong> {contract.filePath}
-                  </Typography>
-                </Box>
               </Stack>
             </CardContent>
           </Card>
