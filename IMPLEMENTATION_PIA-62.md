@@ -220,10 +220,46 @@ async getContractTypes() {
 
 This ensures consistency across all endpoints - both `getContractTypes()` and `getCategoriesList()` now operate exclusively on Neo4j data.
 
+## Frontend Fix
+
+### Search Page Issue
+The frontend SearchPage was incorrectly calling `useContractsControllerGetAllContracts()` (which reads from YAML files) when filters were applied without a search query.
+
+**Fixed in `/workspace/frontend/src/pages/SearchPage.tsx`:**
+
+1. **Removed** `useContractsControllerGetAllContracts` import and usage
+2. **Updated** `useContractsControllerSearchByDescription` to:
+   - Always be used for both search and filter operations
+   - Pass `type` and `category` parameters to the backend
+   - Be enabled whenever filters or search query are present
+
+**Before:**
+```typescript
+// Used getAllContracts when no search query (reads from files)
+const allContractsData = useContractsControllerGetAllContracts({
+  query: { enabled: !hasSearchQuery && hasFilters }
+});
+```
+
+**After:**
+```typescript
+// Always use search endpoint (queries Neo4j)
+const searchData = useContractsControllerSearchByDescription({
+  query: hasSearchQuery ? searchQuery : undefined,
+  type: selectedType !== 'all' ? selectedType : undefined,
+  category: selectedCategory !== 'all' ? selectedCategory : undefined
+}, {
+  query: { enabled: shouldFetchData }
+});
+```
+
+Now the frontend consistently uses the Neo4j-based search endpoint for all operations.
+
 ## Files Modified
 
-1. `/workspace/backend/src/contracts/contracts.service.ts` - Main implementation
-2. `/workspace/backend/src/contracts/contracts.service.spec.ts` - Updated tests
+1. `/workspace/backend/src/contracts/contracts.service.ts` - Main backend implementation
+2. `/workspace/backend/src/contracts/contracts.service.spec.ts` - Updated backend tests
+3. `/workspace/frontend/src/pages/SearchPage.tsx` - Fixed frontend to use search endpoint
 
 ## Bug Fix: Aggregation Error
 
