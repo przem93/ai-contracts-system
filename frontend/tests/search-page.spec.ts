@@ -686,6 +686,10 @@ test.describe('Search Page - Search Endpoint Integration', () => {
     let contractsCount = await searchPage.getContractsCount();
     expect(contractsCount).toBe(3);
 
+    await page.route('**/api/contracts/search*', async (route) => {
+      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.databaseSearch));
+    });
+
     // Filter by API category
     await searchPage.selectCategory('Api');
     await page.waitForTimeout(300);
