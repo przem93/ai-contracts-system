@@ -1,0 +1,28 @@
+id: main-page
+type: ui
+description: Main page of application
+category: page
+parts:
+  - id: id
+    type: string
+  - id: posts
+    type: Post[]
+dependencies:
+  - module_id: post-component
+    parts:
+      - part_id: id
+        type: string
+      - part_id: name
+        type: string
+      - part_id: description
+        type: string
+      - part_id: image
+        type: string
+      - part_id: likes
+        type: number
+      - part_id: comments
+        type: array
+        items:
+          type: object
+          properties:
+            id:

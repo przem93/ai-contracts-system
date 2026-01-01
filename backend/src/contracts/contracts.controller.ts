@@ -144,39 +144,6 @@ export class ContractsController {
     return applyResult;
   }
 
-  @Get(":module_id")
-  @ApiOperation({
-    summary: "Get details for a specific module",
-    description:
-      "Returns module details from Neo4j including id, type, category, description, and parts",
-  })
-  @ApiParam({
-    name: "module_id",
-    description: "The module ID to get details for",
-    example: "users-service",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Returns module details",
-    type: ModuleDetailResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: "Module not found",
-  })
-  async getModuleDetail(
-    @Param("module_id") moduleId: string,
-  ): Promise<ModuleDetailResponseDto> {
-    try {
-      return await this.contractsService.getModuleDetail(moduleId);
-    } catch (error) {
-      if (error.message.includes("not found")) {
-        throw new NotFoundException(error.message);
-      }
-      throw error;
-    }
-  }
-
   @Get(":module_id/relations")
   @ApiOperation({
     summary: "Get relations for a specific module",
@@ -308,6 +275,39 @@ export class ContractsController {
       throw new InternalServerErrorException(
         `Failed to fetch categories: ${error.message}`,
       );
+    }
+  }
+
+  @Get(":module_id")
+  @ApiOperation({
+    summary: "Get details for a specific module",
+    description:
+      "Returns module details from Neo4j including id, type, category, description, and parts",
+  })
+  @ApiParam({
+    name: "module_id",
+    description: "The module ID to get details for",
+    example: "users-service",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Returns module details",
+    type: ModuleDetailResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Module not found",
+  })
+  async getModuleDetail(
+    @Param("module_id") moduleId: string,
+  ): Promise<ModuleDetailResponseDto> {
+    try {
+      return await this.contractsService.getModuleDetail(moduleId);
+    } catch (error) {
+      if (error.message.includes("not found")) {
+        throw new NotFoundException(error.message);
+      }
+      throw error;
     }
   }
 }

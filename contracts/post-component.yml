@@ -1,6 +1,6 @@
 id: post-component
 type: ui
-description: Post component for the frontend
+description: Post component for frontend
 category: component
 parts:
   - id: id
@@ -19,3 +19,10 @@ parts:
       type: object
       properties:
         id:
+dependencies:
+  - module_id: comment-component
+    parts:
+      - part_id: id
+        type: string
+      - part_id: description
+        type: string

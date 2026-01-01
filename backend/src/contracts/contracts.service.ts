@@ -584,9 +584,13 @@ export class ContractsService implements OnModuleInit {
           let embedding: number[] | null = null;
           if (this.embeddingService.isReady()) {
             try {
+              const category = contract.category ? `Category: ${contract.category}` : '';
+              const type = contract.type ? `Type: ${contract.type}` : '';
+
               embedding = await this.embeddingService.generateEmbedding(
-                contract.description,
+                `${contract.description} ${category} ${type}`,
               );
+
               this.logger.log(
                 `Generated embedding for module: ${contract.id} (${embedding.length} dimensions)`,
               );

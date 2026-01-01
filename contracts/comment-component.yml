@@ -1,0 +1,9 @@
+id: comment-component
+type: ui
+description: Comment component for the frontend
+category: component
+parts:
+  - id: id
+    type: string
+  - id: description
+    type: string
