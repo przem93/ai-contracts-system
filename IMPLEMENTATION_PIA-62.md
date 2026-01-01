@@ -264,13 +264,21 @@ const searchData = useContractsControllerSearchByDescription({
 2. **Updated** API documentation to clarify that endpoint returns all modules when no parameters provided
 3. **Changed** default limit from 10 to 50 to better handle "show all" use case
 
+**Updated `/workspace/backend/src/contracts/contracts.controller.spec.ts`:**
+
+1. **Updated** all tests expecting default limit of 10 to expect 50
+2. **Replaced** tests that expected BadRequestException for no parameters with tests that verify the endpoint returns all contracts
+3. **Updated** test descriptions to reflect new behavior
+
 Now the search endpoint can be called without any parameters and will return all contracts from Neo4j.
 
 ## Files Modified
 
 1. `/workspace/backend/src/contracts/contracts.service.ts` - Main backend implementation
-2. `/workspace/backend/src/contracts/contracts.service.spec.ts` - Updated backend tests
-3. `/workspace/frontend/src/pages/SearchPage.tsx` - Fixed frontend to use search endpoint
+2. `/workspace/backend/src/contracts/contracts.service.spec.ts` - Updated backend service tests
+3. `/workspace/backend/src/contracts/contracts.controller.ts` - Updated controller to allow no parameters
+4. `/workspace/backend/src/contracts/contracts.controller.spec.ts` - Updated controller tests for new default limit and behavior
+5. `/workspace/frontend/src/pages/SearchPage.tsx` - Fixed frontend to always use search endpoint
 
 ## Bug Fix: Aggregation Error
 
