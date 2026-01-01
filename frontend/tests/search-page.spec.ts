@@ -47,22 +47,60 @@ test.describe('Search Page with Category and Type Select', () => {
     await page.route('**/api/contracts/search*', async (route) => {
       const url = new URL(route.request().url());
       const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
       
-      // Return appropriate mock data based on search query
-      if (query.toLowerCase().includes('user')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
-      } else if (query.toLowerCase().includes('service')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
-      } else if (query.toLowerCase().includes('authentication')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.authSearch));
-      } else if (query.toLowerCase().includes('database')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.databaseSearch));
-      } else if (query.toLowerCase().includes('xyznonexistent')) {
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.emptySearch));
-      } else {
-        // Default: return service search results for generic "test" queries
-        await route.fulfill(mockSearchApiResponses.success(mockSearchResults.serviceSearch));
+      // Filter mock data based on type and category parameters
+      let dataToReturn = mockContracts.mixedCategoryContracts;
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
       }
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      // If there's a query, use specific mock data
+      if (query) {
+        if (query.toLowerCase().includes('user')) {
+          dataToReturn = mockSearchResults.userSearch.results;
+        } else if (query.toLowerCase().includes('service')) {
+          dataToReturn = mockSearchResults.serviceSearch.results;
+        } else if (query.toLowerCase().includes('authentication')) {
+          dataToReturn = mockSearchResults.authSearch.results;
+        } else if (query.toLowerCase().includes('database')) {
+          dataToReturn = mockSearchResults.databaseSearch.results;
+        } else if (query.toLowerCase().includes('xyznonexistent')) {
+          dataToReturn = [];
+        } else {
+          dataToReturn = mockSearchResults.serviceSearch.results;
+        }
+        
+        // Apply filters to search results too
+        if (category) {
+          dataToReturn = dataToReturn.filter((contract: any) => 
+            contract.content.category === category
+          );
+        }
+        if (type) {
+          dataToReturn = dataToReturn.filter((contract: any) => 
+            contract.content.type === type
+          );
+        }
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
@@ -679,9 +717,35 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock search API with user search results (mixed types)
+    // Mock search API with filtering support
     await page.route('**/api/contracts/search*', async (route) => {
-      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+      const url = new URL(route.request().url());
+      const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
+      
+      // Start with user search results
+      let dataToReturn = mockSearchResults.userSearch.results;
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
@@ -727,9 +791,35 @@ test.describe('Search Page - Search Endpoint Integration', () => {
       });
     });
 
-    // Mock search API with user search results
+    // Mock search API with filtering support
     await page.route('**/api/contracts/search*', async (route) => {
-      await route.fulfill(mockSearchApiResponses.success(mockSearchResults.userSearch));
+      const url = new URL(route.request().url());
+      const query = url.searchParams.get('query') || '';
+      const type = url.searchParams.get('type');
+      const category = url.searchParams.get('category');
+      
+      // Start with user search results
+      let dataToReturn = mockSearchResults.userSearch.results;
+      
+      // Apply category filter
+      if (category) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.category === category
+        );
+      }
+      
+      // Apply type filter
+      if (type) {
+        dataToReturn = dataToReturn.filter((contract: any) => 
+          contract.content.type === type
+        );
+      }
+      
+      await route.fulfill(mockSearchApiResponses.success({
+        query: query,
+        resultsCount: dataToReturn.length,
+        results: dataToReturn
+      }));
     });
 
     searchPage = new SearchPage(page);
