@@ -1710,9 +1710,9 @@ describe("ContractsService", () => {
 
       await service.applyContractsToNeo4j(contractFiles);
 
-      // Verify generateEmbedding was called with the description
+      // Verify generateEmbedding was called with the description, category, and type
       expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
-        "Test module description",
+        "Test module description Category: backend Type: service",
       );
 
       // Verify module creation was called with embedding
@@ -1836,12 +1836,12 @@ describe("ContractsService", () => {
 
       await service.applyContractsToNeo4j(contractFiles);
 
-      // Verify generateEmbedding was called for both descriptions
+      // Verify generateEmbedding was called for both descriptions with category and type
       expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
-        "First module description",
+        "First module description Category: backend Type: service",
       );
       expect(embeddingService.generateEmbedding).toHaveBeenCalledWith(
-        "Second module description",
+        "Second module description Category: api Type: controller",
       );
       expect(embeddingService.generateEmbedding).toHaveBeenCalledTimes(2);
 

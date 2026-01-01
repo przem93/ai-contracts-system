@@ -242,7 +242,9 @@ test.describe('Contract Detail Page', () => {
 
   test('should show error when contract is not found', async ({ page }) => {
     await detailPage.navigate('nonexistent-contract');
-    await page.waitForTimeout(500);
+    
+    // Wait for error alert to appear
+    await expect(detailPage.errorAlert).toBeVisible({ timeout: 5000 });
 
     // Verify error alert is displayed
     const hasError = await detailPage.hasError();

@@ -84,6 +84,11 @@ export class ContractDetailPage extends BasePage {
    * Verify if error alert is visible
    */
   async hasError(): Promise<boolean> {
-    return await this.errorAlert.isVisible();
+    try {
+      await this.errorAlert.waitFor({ state: 'visible', timeout: 5000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
